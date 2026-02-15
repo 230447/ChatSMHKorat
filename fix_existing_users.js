@@ -2,12 +2,12 @@
 const mysql = require('mysql2');
 require('dotenv').config();
 
-const connection = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'chatsmhkorat',
-    charset: 'utf8mb4'
+const { Pool } = require('pg');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 console.log('🛠️ Fixing existing users department rooms...');

@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
@@ -30,61 +30,60 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Database connection for XAMPP (no password)
-const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',  
-    database: process.env.DB_NAME || 'ChatSMHKorat',
-    charset: 'utf8mb4',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-};
-
-const pool = mysql.createPool(dbConfig);
-
-// Test database connection
-pool.getConnection((err, connection) => {
-    if (err) {
-        console.error('❌ Database connection failed:', err.message);
-        console.log('💡 Solution for XAMPP:');
-        console.log('1. Make sure MySQL is running in XAMPP');
-        console.log('2. Username: root, Password: (empty)');
-        console.log('3. Check if database exists');
-    } else {
-        console.log('✅ Database connected successfully!');
-        
-        connection.release();
+// PostgreSQL connection for Supabase
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
     }
 });
 
+// Test database connection
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('❌ Database connection failed:', err.message);
+        console.log('💡 Solution:');
+        console.log('1. Check DATABASE_URL in environment variables');
+        console.log('2. Make sure Supabase project is active');
+        console.log('3. Check if password is correct');
+    } else {
+        console.log('✅ Database connected to Supabase successfully!');
+        release();
+    }
+});
+
+// Helper function to get database connection
+const getConnection = async () => {
+    return await pool.connect();
+};
+
 // Function to create department chat rooms if they don't exist
 async function createDepartmentRooms() {
-    let connection;
+    let client;
     try {
-        connection = await getConnection();
+        client = await getConnection();
         
         console.log('🔍 Checking department chat rooms...');
         
-        const [departments] = await connection.execute(
-            'SELECT department_id, department_name FROM department'
+        const departmentsResult = await client.query(
+            'SELECT department_id, department_name FROM departments'
         );
+        const departments = departmentsResult.rows;
         
         console.log(`Found ${departments.length} departments`);
         
         let createdCount = 0;
         
         for (const dept of departments) {
-            const [existingRoom] = await connection.execute(
-                'SELECT room_id FROM chat_rooms WHERE department_id = ? AND room_type = "department"',
-                [dept.department_id]
+            const existingRoomResult = await client.query(
+                'SELECT room_id FROM chat_rooms WHERE department_id = $1 AND room_type = $2',
+                [dept.department_id, 'department']
             );
             
-            if (existingRoom.length === 0) {
-                await connection.execute(
-                    'INSERT INTO chat_rooms (room_name, room_type, department_id) VALUES (?, "department", ?)',
-                    [`ห้องแชท - ${dept.department_name}`, dept.department_id]
+            if (existingRoomResult.rows.length === 0) {
+                await client.query(
+                    'INSERT INTO chat_rooms (room_name, room_type, department_id) VALUES ($1, $2, $3)',
+                    [`ห้องแชท - ${dept.department_name}`, 'department', dept.department_id]
                 );
                 createdCount++;
                 console.log(`✅ Created chat room for: ${dept.department_name}`);
@@ -100,10 +99,10 @@ async function createDepartmentRooms() {
         // ✅ ตรวจสอบและเพิ่มสมาชิกที่ยังไม่ได้อยู่ในห้องแผนกของตนเอง
         console.log('🔍 Checking department room memberships...');
         
-        const [usersWithoutRooms] = await connection.execute(`
+        const usersWithoutRoomsResult = await client.query(`
             SELECT u.user_id, u.department_id, d.department_name 
             FROM users u
-            LEFT JOIN department d ON u.department_id = d.department_id
+            LEFT JOIN departments d ON u.department_id = d.department_id
             WHERE NOT EXISTS (
                 SELECT 1 FROM room_members rm
                 INNER JOIN chat_rooms cr ON rm.room_id = cr.room_id
@@ -112,18 +111,19 @@ async function createDepartmentRooms() {
                 AND cr.room_type = 'department'
             )
         `);
+        const usersWithoutRooms = usersWithoutRoomsResult.rows;
         
         let addedCount = 0;
         for (const user of usersWithoutRooms) {
-            const [deptRoom] = await connection.execute(
-                'SELECT room_id FROM chat_rooms WHERE department_id = ? AND room_type = "department"',
-                [user.department_id]
+            const deptRoomResult = await client.query(
+                'SELECT room_id FROM chat_rooms WHERE department_id = $1 AND room_type = $2',
+                [user.department_id, 'department']
             );
             
-            if (deptRoom.length > 0) {
-                await connection.execute(
-                    'INSERT INTO room_members (room_id, user_id) VALUES (?, ?)',
-                    [deptRoom[0].room_id, user.user_id]
+            if (deptRoomResult.rows.length > 0) {
+                await client.query(
+                    'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)',
+                    [deptRoomResult.rows[0].room_id, user.user_id]
                 );
                 addedCount++;
                 console.log(`✅ Added user ${user.user_id} to ${user.department_name} department room`);
@@ -137,36 +137,36 @@ async function createDepartmentRooms() {
     } catch (error) {
         console.error('Error creating department rooms:', error);
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 }
 
 // เรียกใช้ฟังก์ชันเมื่อ server start
 createDepartmentRooms();
+
 // เพิ่มฟังก์ชันสร้าง table (เรียกใช้ใน createDepartmentRooms())
 async function createSummaryTable() {
-    let connection;
+    let client;
     try {
-        connection = await getConnection();
+        client = await getConnection();
         
-        await connection.execute(`
+        await client.query(`
             CREATE TABLE IF NOT EXISTS chat_summary_new (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                summary_id VARCHAR(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                chat_content TEXT COLLATE utf8mb4_unicode_ci,
-                summary TEXT COLLATE utf8mb4_unicode_ci,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                saved_at DATETIME NULL,
-                UNIQUE KEY summary_id (summary_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                id SERIAL PRIMARY KEY,
+                summary_id VARCHAR(50) UNIQUE,
+                chat_content TEXT,
+                summary TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                saved_at TIMESTAMP NULL
+            )
         `);
         
-        console.log('✅ Created/Checked chat_summary_new table (same as phpMyAdmin)');
+        console.log('✅ Created/Checked chat_summary_new table');
         
     } catch (error) {
         console.error('Error creating summary table:', error);
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 }
 // เรียกใช้ใน createDepartmentRooms() หรือแยกเรียก
@@ -228,16 +228,11 @@ const authenticateToken = async (req, res, next) => {
     }
 };
 
-// Helper function to get database connection
-const getConnection = async () => {
-    return await pool.getConnection();
-};
-
 // API Routes
 
 // 1. Register
 app.post('/api/register', async (req, res) => {
-    let connection;
+    let client;
     try {
         const { employee_id, username, password, full_name, email, department_id } = req.body;
         
@@ -245,15 +240,15 @@ app.post('/api/register', async (req, res) => {
             return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
         
         // Check existing user
-        const [existing] = await connection.execute(
-            'SELECT user_id FROM users WHERE employee_id = ? OR username = ?',
+        const existingResult = await client.query(
+            'SELECT user_id FROM users WHERE employee_id = $1 OR username = $2',
             [employee_id, username]
         );
 
-        if (existing.length > 0) {
+        if (existingResult.rows.length > 0) {
             return res.status(400).json({ error: 'รหัสพนักงานหรือชื่อผู้ใช้มีอยู่แล้ว' });
         }
 
@@ -261,44 +256,45 @@ app.post('/api/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user
-        const [result] = await connection.execute(
+        const result = await client.query(
             `INSERT INTO users (employee_id, username, password, full_name, email, department_id) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id`,
             [employee_id, username, hashedPassword, full_name, email, department_id]
         );
 
-        const userId = result.insertId;
+        const userId = result.rows[0].user_id;
 
         // ✅ 1. ตรวจสอบว่ามีห้องแผนกนี้หรือไม่
-        let [departmentRoom] = await connection.execute(
-            'SELECT room_id FROM chat_rooms WHERE department_id = ? AND room_type = "department"',
-            [department_id]
+        let departmentRoomResult = await client.query(
+            'SELECT room_id FROM chat_rooms WHERE department_id = $1 AND room_type = $2',
+            [department_id, 'department']
         );
+        let departmentRoom = departmentRoomResult.rows;
 
         // ✅ 2. ถ้าไม่มีห้องแผนก ให้สร้างห้องใหม่
         if (departmentRoom.length === 0) {
             let departmentName = 'แผนกไม่ทราบชื่อ';
-            const [deptInfo] = await connection.execute(
-                'SELECT department_name FROM department WHERE department_id = ?',
+            const deptInfoResult = await client.query(
+                'SELECT department_name FROM departments WHERE department_id = $1',
                 [department_id]
             );
             
-            if (deptInfo.length > 0) {
-                departmentName = deptInfo[0].department_name;
+            if (deptInfoResult.rows.length > 0) {
+                departmentName = deptInfoResult.rows[0].department_name;
             }
             
-            const [roomResult] = await connection.execute(
-                'INSERT INTO chat_rooms (room_name, room_type, department_id) VALUES (?, "department", ?)',
-                [`ห้องแชท - ${departmentName}`, department_id]
+            const roomResult = await client.query(
+                'INSERT INTO chat_rooms (room_name, room_type, department_id) VALUES ($1, $2, $3) RETURNING room_id',
+                [`ห้องแชท - ${departmentName}`, 'department', department_id]
             );
             
-            departmentRoom = [{ room_id: roomResult.insertId }];
+            departmentRoom = [{ room_id: roomResult.rows[0].room_id }];
         }
 
         // ✅ 3. เพิ่มผู้ใช้เข้าไปในห้องแผนกของตนเอง
         if (departmentRoom.length > 0) {
-            await connection.execute(
-                'INSERT INTO room_members (room_id, user_id) VALUES (?, ?)',
+            await client.query(
+                'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)',
                 [departmentRoom[0].room_id, userId]
             );
         }
@@ -316,12 +312,12 @@ app.post('/api/register', async (req, res) => {
         );
 
         // ✅ 4. ดึงข้อมูลแผนกสำหรับ response
-        const [deptData] = await connection.execute(
-            'SELECT department_name FROM department WHERE department_id = ?',
+        const deptDataResult = await client.query(
+            'SELECT department_name FROM departments WHERE department_id = $1',
             [department_id]
         );
 
-        const department_name = deptData.length > 0 ? deptData[0].department_name : 'ไม่ทราบแผนก';
+        const department_name = deptDataResult.rows.length > 0 ? deptDataResult.rows[0].department_name : 'ไม่ทราบแผนก';
 
         res.status(201).json({
             success: true,
@@ -342,13 +338,13 @@ app.post('/api/register', async (req, res) => {
         console.error('Register error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการลงทะเบียน' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 2. Login
 app.post('/api/login', async (req, res) => {
-    let connection;
+    let client;
     try {
         const { username, password } = req.body;
 
@@ -356,21 +352,21 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ error: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน' });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [users] = await connection.execute(
+        const usersResult = await client.query(
             `SELECT u.*, d.department_name 
              FROM users u 
-             LEFT JOIN department d ON u.department_id = d.department_id 
-             WHERE u.username = ? OR u.employee_id = ?`,
+             LEFT JOIN departments d ON u.department_id = d.department_id 
+             WHERE u.username = $1 OR u.employee_id = $2`,
             [username, username]
         );
 
-        if (users.length === 0) {
+        if (usersResult.rows.length === 0) {
             return res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
         }
 
-        const user = users[0];
+        const user = usersResult.rows[0];
 
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
@@ -378,8 +374,8 @@ app.post('/api/login', async (req, res) => {
         }
 
         // Update online status
-        await connection.execute(
-            'UPDATE users SET is_online = TRUE, last_seen = NOW() WHERE user_id = ?',
+        await client.query(
+            'UPDATE users SET is_online = TRUE, last_seen = NOW() WHERE user_id = $1',
             [user.user_id]
         );
 
@@ -415,36 +411,36 @@ app.post('/api/login', async (req, res) => {
         console.error('Login error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 3. Get current user
 app.get('/api/me', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [users] = await connection.execute(
+        const usersResult = await client.query(
             `SELECT u.*, d.department_name 
              FROM users u 
-             LEFT JOIN department d ON u.department_id = d.department_id 
-             WHERE u.user_id = ?`,
+             LEFT JOIN departments d ON u.department_id = d.department_id 
+             WHERE u.user_id = $1`,
             [req.user.user_id]
         );
 
-        if (users.length === 0) {
+        if (usersResult.rows.length === 0) {
             return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
         }
 
-        const user = users[0];
+        const user = usersResult.rows[0];
         res.json({ success: true, user });
 
     } catch (error) {
         console.error('Get user error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
@@ -453,20 +449,20 @@ app.get('/api/departments', async (req, res) => {
     console.log('📋 Requesting departments...');
     
     try {
-        const connection = await pool.getConnection();
+        const client = await pool.connect();
         
         try {
-            const [departments] = await connection.execute(
-                'SELECT * FROM department ORDER BY department_name'
+            const departmentsResult = await client.query(
+                'SELECT * FROM departments ORDER BY department_name'
             );
             
-            connection.release();
+            client.release();
             
-            if (departments.length > 0) {
-                console.log(`✅ Found ${departments.length} departments in database`);
+            if (departmentsResult.rows.length > 0) {
+                console.log(`✅ Found ${departmentsResult.rows.length} departments in database`);
                 return res.json({ 
                     success: true, 
-                    departments: departments,
+                    departments: departmentsResult.rows,
                     source: 'database'
                 });
             } else {
@@ -475,7 +471,7 @@ app.get('/api/departments', async (req, res) => {
             }
             
         } catch (queryError) {
-            connection.release();
+            client.release();
             console.log('⚠️ Database query failed:', queryError.message);
             return sendBackupDepartments(res);
         }
@@ -485,6 +481,7 @@ app.get('/api/departments', async (req, res) => {
         return sendBackupDepartments(res);
     }
 });
+
 // ฟังก์ชันตรวจสอบ API Key
 function validateGeminiAPI() {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -507,6 +504,7 @@ function validateGeminiAPI() {
     
     return true;
 }
+
 // ฟังก์ชันเรียก Gemini
 async function generateWithGemini(prompt) {
     try {
@@ -561,6 +559,7 @@ async function generateWithGemini(prompt) {
         throw new Error(`Gemini Error: ${error.message}`);
     }
 }
+
 function sendBackupDepartments(res) {
     console.log('📦 Sending backup departments data');
     
@@ -604,14 +603,14 @@ function sendBackupDepartments(res) {
 
 // 5. Get user's chat rooms
 app.get('/api/chat-rooms', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const userId = req.user.user_id;
-        connection = await getConnection();
+        client = await getConnection();
 
         console.log(`🔍 ดึงข้อมูลห้องสำหรับ user_id: ${userId}`);
 
-        const [rooms] = await connection.execute(
+        const roomsResult = await client.query(
             `SELECT 
                 cr.room_id,
                 cr.room_name,
@@ -620,20 +619,20 @@ app.get('/api/chat-rooms', authenticateToken, async (req, res) => {
                 cr.created_at,
                 d.department_name
             FROM chat_rooms cr
-            LEFT JOIN department d ON cr.department_id = d.department_id
+            LEFT JOIN departments d ON cr.department_id = d.department_id
             WHERE cr.room_id IN (
-                SELECT room_id FROM room_members WHERE user_id = ?
+                SELECT room_id FROM room_members WHERE user_id = $1
             )
             ORDER BY cr.room_type, cr.room_name`,
             [userId]
         );
 
-        console.log(`✅ พบ ${rooms.length} ห้องสำหรับ user ${userId}`);
+        console.log(`✅ พบ ${roomsResult.rows.length} ห้องสำหรับ user ${userId}`);
 
         res.json({ 
             success: true, 
-            rooms: rooms,
-            count: rooms.length
+            rooms: roomsResult.rows,
+            count: roomsResult.rows.length
         });
 
     } catch (error) {
@@ -643,14 +642,13 @@ app.get('/api/chat-rooms', authenticateToken, async (req, res) => {
             error: 'เกิดข้อผิดพลาดในการดึงข้อมูลห้องสนทนา'
         });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 6. Create new chat room
-// บรรทัดที่ ~420: แก้ไขฟังก์ชัน create chat room
 app.post('/api/chat-rooms', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { room_name, room_type = 'group', member_ids = [] } = req.body;
         const creator_id = req.user.user_id;
@@ -675,31 +673,32 @@ app.post('/api/chat-rooms', authenticateToken, async (req, res) => {
             });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
         // สร้างห้อง
-        const [roomResult] = await connection.execute(
-            'INSERT INTO chat_rooms (room_name, room_type, created_by, created_at) VALUES (?, ?, ?, NOW())',
+        const roomResult = await client.query(
+            'INSERT INTO chat_rooms (room_name, room_type, created_by, created_at) VALUES ($1, $2, $3, NOW()) RETURNING room_id',
             [room_name.trim(), room_type, creator_id]
         );
 
-        const roomId = roomResult.insertId;
+        const roomId = roomResult.rows[0].room_id;
         console.log(`✅ Room created with ID: ${roomId}`);
 
         // เพิ่มสมาชิก (รวมตัวสร้างด้วย)
         const allMemberIds = [...new Set([...member_ids, creator_id])];
         
         if (allMemberIds.length > 0) {
-            const values = allMemberIds.map(user_id => [roomId, user_id]);
-            await connection.query(
-                'INSERT INTO room_members (room_id, user_id) VALUES ?',
-                [values]
-            );
+            for (const memberId of allMemberIds) {
+                await client.query(
+                    'INSERT INTO room_members (room_id, user_id) VALUES ($1, $2)',
+                    [roomId, memberId]
+                );
+            }
             console.log(`✅ Added ${allMemberIds.length} members to room`);
         }
 
         // ดึงข้อมูลห้องที่สร้าง
-        const [rooms] = await connection.execute(`
+        const roomsResult = await client.query(`
             SELECT 
                 cr.room_id,
                 cr.room_name,
@@ -708,11 +707,11 @@ app.post('/api/chat-rooms', authenticateToken, async (req, res) => {
                 cr.created_by,
                 d.department_name
             FROM chat_rooms cr
-            LEFT JOIN department d ON cr.department_id = d.department_id
-            WHERE cr.room_id = ?
+            LEFT JOIN departments d ON cr.department_id = d.department_id
+            WHERE cr.room_id = $1
         `, [roomId]);
 
-        const newRoom = rooms[0] || null;
+        const newRoom = roomsResult.rows[0] || null;
 
         // ✅ ส่ง response กลับไป
         res.status(201).json({
@@ -760,52 +759,53 @@ app.post('/api/chat-rooms', authenticateToken, async (req, res) => {
             details: error.message
         });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
+
 // 7. Get room messages
 app.get('/api/chat-rooms/:roomId/messages', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { roomId } = req.params;
         const { limit = 50, offset = 0 } = req.query;
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [membership] = await connection.execute(
-            'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?',
+        const membershipResult = await client.query(
+            'SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2',
             [roomId, req.user.user_id]
         );
 
-        if (membership.length === 0) {
+        if (membershipResult.rows.length === 0) {
             return res.status(403).json({ error: 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้' });
         }
 
-        const [messages] = await connection.execute(
+        const messagesResult = await client.query(
             `SELECT m.*, u.username, u.full_name, u.profile_image, d.department_name,
              (SELECT COUNT(*) FROM message_reads mr WHERE mr.message_id = m.message_id) as read_count
              FROM messages m
              JOIN users u ON m.sender_id = u.user_id
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE m.room_id = ?
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE m.room_id = $1
              ORDER BY m.created_at DESC
-             LIMIT ? OFFSET ?`,
+             LIMIT $2 OFFSET $3`,
             [roomId, parseInt(limit), parseInt(offset)]
         );
 
-        await connection.execute(
+        await client.query(
             `INSERT INTO message_reads (message_id, user_id)
-             SELECT m.message_id, ? FROM messages m
-             WHERE m.room_id = ? AND m.sender_id != ?
+             SELECT m.message_id, $1 FROM messages m
+             WHERE m.room_id = $2 AND m.sender_id != $3
              AND m.message_id NOT IN (
-                 SELECT message_id FROM message_reads WHERE user_id = ?
+                 SELECT message_id FROM message_reads WHERE user_id = $4
              )`,
             [req.user.user_id, roomId, req.user.user_id, req.user.user_id]
         );
 
         res.json({
             success: true,
-            messages: messages.reverse(),
+            messages: messagesResult.rows.reverse(),
             room_id: roomId
         });
 
@@ -813,13 +813,13 @@ app.get('/api/chat-rooms/:roomId/messages', authenticateToken, async (req, res) 
         console.error('Get messages error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
-// 8. Send message - สำคัญที่สุด! แก้ไขให้ emit ไปยัง socket room
+// 8. Send message
 app.post('/api/chat-rooms/:roomId/messages', authenticateToken, upload.single('file'), async (req, res) => {
-    let connection;
+    let client;
     try {
         const { roomId } = req.params;
         const { message_text, message_type = 'text' } = req.body;
@@ -828,14 +828,14 @@ app.post('/api/chat-rooms/:roomId/messages', authenticateToken, upload.single('f
         console.log(`📝 Message: ${message_text}`);
         console.log(`👤 User: ${req.user.user_id}`);
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [membership] = await connection.execute(
-            'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?',
+        const membershipResult = await client.query(
+            'SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2',
             [roomId, req.user.user_id]
         );
 
-        if (membership.length === 0) {
+        if (membershipResult.rows.length === 0) {
             return res.status(403).json({ error: 'คุณไม่มีสิทธิ์ส่งข้อความในห้องนี้' });
         }
 
@@ -849,28 +849,28 @@ app.post('/api/chat-rooms/:roomId/messages', authenticateToken, upload.single('f
             file_size = req.file.size;
         }
 
-        const [messageResult] = await connection.execute(
+        const messageResult = await client.query(
             `INSERT INTO messages (room_id, sender_id, message_text, message_type, file_url, file_name, file_size) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING message_id`,
             [roomId, req.user.user_id, message_text, message_type, file_url, file_name, file_size]
         );
 
-        const messageId = messageResult.insertId;
+        const messageId = messageResult.rows[0].message_id;
 
-        const [messages] = await connection.execute(
+        const messagesResult = await client.query(
             `SELECT m.*, u.username, u.full_name, u.profile_image, d.department_name
              FROM messages m
              JOIN users u ON m.sender_id = u.user_id
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE m.message_id = ?`,
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE m.message_id = $1`,
             [messageId]
         );
 
-        if (messages.length === 0) {
+        if (messagesResult.rows.length === 0) {
             return res.status(500).json({ error: 'เกิดข้อผิดพลาดในการส่งข้อความ' });
         }
 
-        const newMessage = messages[0];
+        const newMessage = messagesResult.rows[0];
         console.log('✅ Message created in DB:', newMessage);
 
         // ✅ สำคัญ: Broadcast ไปยัง socket room ทุกคน
@@ -886,13 +886,13 @@ app.post('/api/chat-rooms/:roomId/messages', authenticateToken, upload.single('f
         console.error('Send message error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการส่งข้อความ' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 9. Search users
 app.get('/api/users/search', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { q } = req.query;
 
@@ -900,53 +900,54 @@ app.get('/api/users/search', authenticateToken, async (req, res) => {
             return res.json({ success: true, users: [] });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [users] = await connection.execute(
+        const usersResult = await client.query(
             `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.email, 
                     u.profile_image, u.is_online, d.department_name
              FROM users u
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE (u.username LIKE ? OR u.full_name LIKE ? OR u.employee_id LIKE ?)
-             AND u.user_id != ?
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE (u.username ILIKE $1 OR u.full_name ILIKE $2 OR u.employee_id ILIKE $3)
+             AND u.user_id != $4
              ORDER BY u.full_name
              LIMIT 20`,
             [`%${q}%`, `%${q}%`, `%${q}%`, req.user.user_id]
         );
 
-        res.json({ success: true, users });
+        res.json({ success: true, users: usersResult.rows });
 
     } catch (error) {
         console.error('Search users error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 10. Update profile
 app.put('/api/profile', authenticateToken, upload.single('profile_image'), async (req, res) => {
-    let connection;
+    let client;
     try {
         const { full_name, email } = req.body;
 
-        connection = await getConnection();
+        client = await getConnection();
 
         const updateFields = [];
         const values = [];
+        let paramIndex = 1;
 
         if (full_name) {
-            updateFields.push('full_name = ?');
+            updateFields.push(`full_name = $${paramIndex++}`);
             values.push(full_name);
         }
 
         if (email) {
-            updateFields.push('email = ?');
+            updateFields.push(`email = $${paramIndex++}`);
             values.push(email);
         }
 
         if (req.file) {
-            updateFields.push('profile_image = ?');
+            updateFields.push(`profile_image = $${paramIndex++}`);
             values.push(`/uploads/${req.file.filename}`);
         }
 
@@ -956,33 +957,33 @@ app.put('/api/profile', authenticateToken, upload.single('profile_image'), async
 
         values.push(req.user.user_id);
 
-        const query = `UPDATE users SET ${updateFields.join(', ')}, updated_at = NOW() WHERE user_id = ?`;
-        await connection.execute(query, values);
+        const query = `UPDATE users SET ${updateFields.join(', ')}, updated_at = NOW() WHERE user_id = $${paramIndex}`;
+        await client.query(query, values);
 
-        const [users] = await connection.execute(
+        const usersResult = await client.query(
             `SELECT u.*, d.department_name FROM users u 
-             LEFT JOIN department d ON u.department_id = d.department_id 
-             WHERE u.user_id = ?`,
+             LEFT JOIN departments d ON u.department_id = d.department_id 
+             WHERE u.user_id = $1`,
             [req.user.user_id]
         );
 
         res.json({
             success: true,
             message: 'อัพเดทโปรไฟล์สำเร็จ',
-            user: users[0]
+            user: usersResult.rows[0]
         });
 
     } catch (error) {
         console.error('Update profile error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการอัพเดทโปรไฟล์' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 11. Change password
 app.post('/api/change-password', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { current_password, new_password } = req.body;
 
@@ -994,26 +995,26 @@ app.post('/api/change-password', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร' });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [users] = await connection.execute(
-            'SELECT password FROM users WHERE user_id = ?',
+        const usersResult = await client.query(
+            'SELECT password FROM users WHERE user_id = $1',
             [req.user.user_id]
         );
 
-        if (users.length === 0) {
+        if (usersResult.rows.length === 0) {
             return res.status(404).json({ error: 'ไม่พบผู้ใช้' });
         }
 
-        const validPassword = await bcrypt.compare(current_password, users[0].password);
+        const validPassword = await bcrypt.compare(current_password, usersResult.rows[0].password);
         if (!validPassword) {
             return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
         }
 
         const hashedPassword = await bcrypt.hash(new_password, 10);
 
-        await connection.execute(
-            'UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?',
+        await client.query(
+            'UPDATE users SET password = $1, updated_at = NOW() WHERE user_id = $2',
             [hashedPassword, req.user.user_id]
         );
 
@@ -1023,13 +1024,13 @@ app.post('/api/change-password', authenticateToken, async (req, res) => {
         console.error('Change password error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 12. Forgot password request
 app.post('/api/forgot-password', async (req, res) => {
-    let connection;
+    let client;
     try {
         const { employee_id, email } = req.body;
 
@@ -1037,18 +1038,18 @@ app.post('/api/forgot-password', async (req, res) => {
             return res.status(400).json({ error: 'กรุณากรอกรหัสพนักงานและอีเมล' });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [users] = await connection.execute(
-            'SELECT * FROM users WHERE employee_id = ? AND email = ?',
+        const usersResult = await client.query(
+            'SELECT * FROM users WHERE employee_id = $1 AND email = $2',
             [employee_id, email]
         );
 
-        if (users.length === 0) {
+        if (usersResult.rows.length === 0) {
             return res.status(404).json({ error: 'ไม่พบผู้ใช้ที่ตรงกับข้อมูล' });
         }
 
-        const user = users[0];
+        const user = usersResult.rows[0];
 
         const resetToken = jwt.sign(
             { 
@@ -1072,13 +1073,13 @@ app.post('/api/forgot-password', async (req, res) => {
         console.error('Forgot password error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 13. Reset password
 app.post('/api/reset-password', async (req, res) => {
-    let connection;
+    let client;
     try {
         const { token, new_password } = req.body;
 
@@ -1097,12 +1098,12 @@ app.post('/api/reset-password', async (req, res) => {
             return res.status(401).json({ error: 'Token ไม่ถูกต้อง' });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
         const hashedPassword = await bcrypt.hash(new_password, 10);
 
-        await connection.execute(
-            'UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?',
+        await client.query(
+            'UPDATE users SET password = $1, updated_at = NOW() WHERE user_id = $2',
             [hashedPassword, decoded.user_id]
         );
 
@@ -1112,43 +1113,42 @@ app.post('/api/reset-password', async (req, res) => {
         console.error('Reset password error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 14. Get room members
 app.get('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { roomId } = req.params;
 
-        connection = await getConnection();
+        client = await getConnection();
 
-        const [members] = await connection.execute(
+        const membersResult = await client.query(
             `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.profile_image, 
                     u.is_online, u.last_seen, d.department_name
              FROM room_members rm
              JOIN users u ON rm.user_id = u.user_id
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE rm.room_id = ?
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE rm.room_id = $1
              ORDER BY u.full_name`,
             [roomId]
         );
 
-        res.json({ success: true, members });
+        res.json({ success: true, members: membersResult.rows });
 
     } catch (error) {
         console.error('Get room members error:', error);
         res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
 
 // 15. Add member to room
-// 15. Add member to room - ปรับปรุงใหม่
 app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { roomId } = req.params;
         const { user_id } = req.body;
@@ -1160,22 +1160,22 @@ app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) 
             });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
 
         // ✅ ตรวจสอบว่าห้องเป็นแบบกลุ่มหรือไม่
-        const [rooms] = await connection.execute(
-            'SELECT room_type, room_name FROM chat_rooms WHERE room_id = ?',
+        const roomsResult = await client.query(
+            'SELECT room_type, room_name FROM chat_rooms WHERE room_id = $1',
             [roomId]
         );
 
-        if (rooms.length === 0) {
+        if (roomsResult.rows.length === 0) {
             return res.status(404).json({ 
                 success: false,
                 error: 'ไม่พบห้องสนทนา' 
             });
         }
 
-        const room = rooms[0];
+        const room = roomsResult.rows[0];
 
         if (room.room_type !== 'group') {
             return res.status(400).json({ 
@@ -1185,12 +1185,12 @@ app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) 
         }
 
         // ✅ ตรวจสอบว่าผู้ใช้เป็นสมาชิกอยู่แล้วหรือไม่
-        const [existing] = await connection.execute(
-            'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?',
+        const existingResult = await client.query(
+            'SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2',
             [roomId, user_id]
         );
 
-        if (existing.length > 0) {
+        if (existingResult.rows.length > 0) {
             return res.status(400).json({ 
                 success: false,
                 error: 'ผู้ใช้เป็นสมาชิกห้องนี้อยู่แล้ว' 
@@ -1198,18 +1198,18 @@ app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) 
         }
 
         // ✅ เพิ่มสมาชิก
-        await connection.execute(
-            'INSERT INTO room_members (room_id, user_id, joined_at) VALUES (?, ?, NOW())',
+        await client.query(
+            'INSERT INTO room_members (room_id, user_id, joined_at) VALUES ($1, $2, NOW())',
             [roomId, user_id]
         );
 
         // ✅ ดึงข้อมูลสมาชิกที่เพิ่ม
-        const [newMember] = await connection.execute(
+        const newMemberResult = await client.query(
             `SELECT u.user_id, u.employee_id, u.username, u.full_name, 
                     u.profile_image, u.is_online, d.department_name
              FROM users u
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE u.user_id = ?`,
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE u.user_id = $1`,
             [user_id]
         );
 
@@ -1218,7 +1218,7 @@ app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) 
         res.json({ 
             success: true, 
             message: 'เพิ่มสมาชิกสำเร็จ',
-            member: newMember[0] || null
+            member: newMemberResult.rows[0] || null
         });
 
         // ✅ ส่ง Socket.IO notification
@@ -1232,18 +1232,18 @@ app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) 
         }
 
         // ✅ แจ้งสมาชิกในห้อง
-        const [roomMembers] = await connection.execute(
-            'SELECT user_id FROM room_members WHERE room_id = ?',
+        const roomMembersResult = await client.query(
+            'SELECT user_id FROM room_members WHERE room_id = $1',
             [roomId]
         );
 
-        roomMembers.forEach(member => {
+        roomMembersResult.rows.forEach(member => {
             const socket = onlineUsers.get(member.user_id);
             if (socket && member.user_id !== user_id) {
                 io.to(socket).emit('member_joined', {
                     room_id: roomId,
                     user_id: user_id,
-                    member: newMember[0] || null
+                    member: newMemberResult.rows[0] || null
                 });
             }
         });
@@ -1256,14 +1256,135 @@ app.post('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) 
             details: error.message
         });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
+
+// 16. Get online users
+app.get('/api/users/online', authenticateToken, async (req, res) => {
+    let client;
+    try {
+        client = await getConnection();
+
+        const usersResult = await client.query(
+            `SELECT u.user_id, u.employee_id, u.username, u.full_name, 
+                    u.profile_image, d.department_name
+             FROM users u
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE u.is_online = TRUE
+             AND u.user_id != $1
+             ORDER BY u.full_name`,
+            [req.user.user_id]
+        );
+
+        res.json({ success: true, users: usersResult.rows });
+
+    } catch (error) {
+        console.error('Get online users error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// 17. Leave room
+app.delete('/api/chat-rooms/:roomId/leave', authenticateToken, async (req, res) => {
+    let client;
+    try {
+        const { roomId } = req.params;
+
+        client = await getConnection();
+
+        const roomsResult = await client.query(
+            'SELECT room_type, department_id FROM chat_rooms WHERE room_id = $1',
+            [roomId]
+        );
+
+        if (roomsResult.rows.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบห้องสนทนา' });
+        }
+
+        const room = roomsResult.rows[0];
+
+        if (room.room_type === 'department') {
+            return res.status(400).json({ error: 'ไม่สามารถออกจากห้องแผนกได้' });
+        }
+
+        await client.query(
+            'DELETE FROM room_members WHERE room_id = $1 AND user_id = $2',
+            [roomId, req.user.user_id]
+        );
+
+        res.json({ success: true, message: 'ออกจากห้องสนทนาสำเร็จ' });
+
+    } catch (error) {
+        console.error('Leave room error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// Get all users
+app.get('/api/users', authenticateToken, async (req, res) => {
+    let client;
+    try {
+        client = await getConnection();
+        
+        const usersResult = await client.query(
+            `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.email, 
+                    u.profile_image, u.is_online, u.last_seen, d.department_name
+             FROM users u
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE u.user_id != $1
+             ORDER BY u.is_online DESC, u.full_name`,
+            [req.user.user_id]
+        );
+        
+        res.json({ success: true, users: usersResult.rows });
+        
+    } catch (error) {
+        console.error('Get all users error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// Get user by ID
+app.get('/api/users/:userId', authenticateToken, async (req, res) => {
+    let client;
+    try {
+        const { userId } = req.params;
+        
+        client = await getConnection();
+        
+        const usersResult = await client.query(
+            `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.email, 
+                    u.profile_image, u.is_online, u.last_seen, d.department_name
+             FROM users u
+             LEFT JOIN departments d ON u.department_id = d.department_id
+             WHERE u.user_id = $1`,
+            [userId]
+        );
+        
+        if (usersResult.rows.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบผู้ใช้งาน' });
+        }
+        
+        res.json({ success: true, user: usersResult.rows[0] });
+        
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
+    } finally {
+        if (client) client.release();
+    }
+});
+
 // 18. AI Chat Summary - สรุปการสนทนา
-// 18. AI Chat Summary - สรุปการสนทนา
-// ✅ API Chat Summary - เวอร์ชันสมบูรณ์
 app.post('/api/chat-summary', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { room_id, message_count = 100, custom_instruction } = req.body;
         
@@ -1276,44 +1397,44 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
             });
         }
 
-        connection = await getConnection();
+        client = await getConnection();
         
         // 1. ดึงข้อมูลห้อง
-        const [rooms] = await connection.execute(
-            'SELECT room_name, room_type FROM chat_rooms WHERE room_id = ?',
+        const roomsResult = await client.query(
+            'SELECT room_name, room_type FROM chat_rooms WHERE room_id = $1',
             [room_id]
         );
         
-        if (rooms.length === 0) {
+        if (roomsResult.rows.length === 0) {
             return res.status(404).json({ 
                 success: false, 
                 error: 'ไม่พบห้องสนทนา' 
             });
         }
         
-        const roomName = rooms[0].room_name;
+        const roomName = roomsResult.rows[0].room_name;
         
         // 2. ดึงข้อความล่าสุด
-        const [messages] = await connection.execute(
+        const messagesResult = await client.query(
             `SELECT 
                 m.message_text,
-                DATE_FORMAT(m.created_at, '%H:%i') as time,
-                DATE_FORMAT(m.created_at, '%d/%m/%Y') as date,
+                TO_CHAR(m.created_at, 'HH24:MI') as time,
+                TO_CHAR(m.created_at, 'DD/MM/YYYY') as date,
                 u.full_name,
                 d.department_name
             FROM messages m
             JOIN users u ON m.sender_id = u.user_id
-            LEFT JOIN department d ON u.department_id = d.department_id
-            WHERE m.room_id = ?
+            LEFT JOIN departments d ON u.department_id = d.department_id
+            WHERE m.room_id = $1
             AND m.message_type = 'text'
             AND m.message_text IS NOT NULL
             AND LENGTH(TRIM(m.message_text)) > 0
             ORDER BY m.created_at DESC
-            LIMIT ?`,
+            LIMIT $2`,
             [room_id, parseInt(message_count)]
         );
         
-        const sortedMessages = messages.reverse();
+        const sortedMessages = messagesResult.rows.reverse();
         
         if (sortedMessages.length === 0) {
             return res.status(404).json({ 
@@ -1385,27 +1506,27 @@ ${custom_instruction ? `\n**คำแนะนำเพิ่มเติม:** 
         // 6. สร้าง summary_id
         const summaryId = `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // 7. บันทึกลง database (ตารางใหม่)
+        // 7. บันทึกลง database
         try {
-            const [result] = await connection.execute(
+            const result = await client.query(
                 `INSERT INTO chat_summary_new 
                  (summary_id, chat_content, summary, created_at) 
-                 VALUES (?, ?, ?, NOW())`,
+                 VALUES ($1, $2, $3, NOW()) RETURNING id`,
                 [summaryId, formattedMessages, summary]
             );
             
-            console.log(`💾 บันทึกสรุป ID: ${result.insertId}, Summary ID: ${summaryId}`);
+            console.log(`💾 บันทึกสรุป ID: ${result.rows[0].id}, Summary ID: ${summaryId}`);
             
         } catch (dbError) {
             console.warn('⚠️  ไม่สามารถบันทึก:', dbError.message);
         }
         
-        // 8. ✅ แก้ไขตรงนี้: ส่ง Response พร้อม report_url
+        // 8. ส่ง Response พร้อม report_url
         res.json({
             success: true,
             summary: summary,
             summary_id: summaryId,
-            report_url: `/report?id=${summaryId}&room_id=${room_id}`,  // ✅ เพิ่มบรรทัดนี้
+            report_url: `/report?id=${summaryId}&room_id=${room_id}`,
             stats: {
                 room_id: room_id,
                 room_name: roomName,
@@ -1423,9 +1544,124 @@ ${custom_instruction ? `\n**คำแนะนำเพิ่มเติม:** 
             details: error.message
         });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
+
+// 19. Get summary history
+app.get('/api/chat-summary/history', authenticateToken, async (req, res) => {
+    let client;
+    try {
+        const { limit = 10, offset = 0 } = req.query;
+        
+        client = await getConnection();
+        
+        // ดึงข้อมูลจากตาราง chat_summary_new
+        const summariesResult = await client.query(
+            `SELECT 
+                id,
+                summary_id,
+                LEFT(chat_content, 200) as chat_preview,
+                LEFT(summary, 300) as summary_preview,
+                created_at,
+                saved_at
+            FROM chat_summary_new
+            ORDER BY created_at DESC
+            LIMIT $1 OFFSET $2`,
+            [parseInt(limit), parseInt(offset)]
+        );
+        
+        // นับจำนวนทั้งหมด
+        const totalCountResult = await client.query(
+            'SELECT COUNT(*) as total FROM chat_summary_new'
+        );
+        
+        res.json({
+            success: true,
+            summaries: summariesResult.rows,
+            count: summariesResult.rows.length,
+            total: parseInt(totalCountResult.rows[0].total) || 0
+        });
+        
+    } catch (error) {
+        console.error('Get summary history error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'เกิดข้อผิดพลาดในการดึงประวัติสรุป'
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// 20. Save chat summary
+app.post('/api/chat-summary/save', authenticateToken, async (req, res) => {
+    let client;
+    try {
+        const { room_id, summary_text, summary_title } = req.body;
+        
+        if (!room_id || !summary_text) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'กรุณาระบุ room_id และ summary_text' 
+            });
+        }
+        
+        client = await getConnection();
+        
+        // ตรวจสอบว่าผู้ใช้เป็นสมาชิกของห้องหรือไม่
+        const membershipResult = await client.query(
+            'SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2',
+            [room_id, req.user.user_id]
+        );
+        
+        if (membershipResult.rows.length === 0) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้' 
+            });
+        }
+        
+        // สร้าง summary_id
+        const summaryId = `saved_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // ดึงชื่อห้องสำหรับใช้เป็น title
+        const roomsResult = await client.query(
+            'SELECT room_name FROM chat_rooms WHERE room_id = $1',
+            [room_id]
+        );
+        const roomName = roomsResult.rows.length > 0 ? roomsResult.rows[0].room_name : `ห้อง ${room_id}`;
+        
+        // ใช้ตาราง chat_summary_new
+        const result = await client.query(
+            `INSERT INTO chat_summary_new 
+             (summary_id, chat_content, summary, created_at, saved_at) 
+             VALUES ($1, $2, $3, NOW(), NOW()) RETURNING id`,
+            [summaryId, summary_text, summary_title || `สรุป: ${roomName}`]
+        );
+        
+        console.log(`💾 Saved summary to chat_summary_new, ID: ${result.rows[0].id}, Summary ID: ${summaryId}`);
+        
+        res.status(201).json({
+            success: true,
+            message: 'บันทึกสรุปสำเร็จ',
+            summary_id: summaryId,
+            summary_title: summary_title || `สรุป: ${roomName}`,
+            report_url: `/report?id=${summaryId}&room_id=${room_id}`
+        });
+        
+    } catch (error) {
+        console.error('❌ Save summary error:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'เกิดข้อผิดพลาดในการบันทึกสรุป',
+            details: error.message
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
+
 // ✅ Fallback Summary Function
 function createFallbackSummary(messages, roomName) {
     const userCount = new Set(messages.map(m => m.full_name)).size;
@@ -1452,244 +1688,7 @@ ${deptCount > 1 ? '- มีการประสานงานข้ามแ�
 *หมายเหตุ: เพื่อให้ได้สรุปที่ละเอียดและแม่นยำ กรุณาตรวจสอบการตั้งค่า GEMINI_API_KEY*`;
 }
 
-// 19. Get summary history (เก็บประวัติการสรุป)
-app.get('/api/chat-summary/history', authenticateToken, async (req, res) => {
-    let connection;
-    try {
-        const { limit = 10, offset = 0 } = req.query;
-        
-        connection = await getConnection();
-        
-        // ✅ ดึงข้อมูลจากตาราง chat_summary_new
-        const [summaries] = await connection.execute(
-            `SELECT 
-                id,
-                summary_id,
-                LEFT(chat_content, 200) as chat_preview,
-                LEFT(summary, 300) as summary_preview,
-                created_at,
-                saved_at
-            FROM chat_summary_new
-            ORDER BY created_at DESC
-            LIMIT ? OFFSET ?`,
-            [parseInt(limit), parseInt(offset)]
-        );
-        
-        // นับจำนวนทั้งหมด
-        const [totalCount] = await connection.execute(
-            'SELECT COUNT(*) as total FROM chat_summary_new'
-        );
-        
-        res.json({
-            success: true,
-            summaries: summaries,
-            count: summaries.length,
-            total: totalCount[0].total || 0
-        });
-        
-    } catch (error) {
-        console.error('Get summary history error:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'เกิดข้อผิดพลาดในการดึงประวัติสรุป'
-        });
-    } finally {
-        if (connection) connection.release();
-    }
-});
-
-// 20. Save chat summary
-// ✅ เพิ่ม endpoint ที่ขาดไป
-app.post('/api/chat-summary/save', authenticateToken, async (req, res) => {
-    let connection;
-    try {
-        const { room_id, summary_text, summary_title } = req.body;
-        
-        if (!room_id || !summary_text) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'กรุณาระบุ room_id และ summary_text' 
-            });
-        }
-        
-        connection = await getConnection();
-        
-        // ตรวจสอบว่าผู้ใช้เป็นสมาชิกของห้องหรือไม่
-        const [membership] = await connection.execute(
-            'SELECT * FROM room_members WHERE room_id = ? AND user_id = ?',
-            [room_id, req.user.user_id]
-        );
-        
-        if (membership.length === 0) {
-            return res.status(403).json({ 
-                success: false, 
-                error: 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้' 
-            });
-        }
-        
-        // สร้าง summary_id
-        const summaryId = `saved_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        // ดึงชื่อห้องสำหรับใช้เป็น title
-        const [rooms] = await connection.execute(
-            'SELECT room_name FROM chat_rooms WHERE room_id = ?',
-            [room_id]
-        );
-        const roomName = rooms.length > 0 ? rooms[0].room_name : `ห้อง ${room_id}`;
-        
-        // ✅ ใช้ตาราง chat_summary_new
-        const [result] = await connection.execute(
-            `INSERT INTO chat_summary_new 
-             (summary_id, chat_content, summary, created_at, saved_at) 
-             VALUES (?, ?, ?, NOW(), NOW())`,
-            [summaryId, summary_text, summary_title || `สรุป: ${roomName}`]
-        );
-        
-        console.log(`💾 Saved summary to chat_summary_new, ID: ${result.insertId}, Summary ID: ${summaryId}`);
-        
-        res.status(201).json({
-            success: true,
-            message: 'บันทึกสรุปสำเร็จ',
-            summary_id: summaryId,
-            summary_title: summary_title || `สรุป: ${roomName}`,
-            report_url: `/report?id=${summaryId}&room_id=${room_id}`  // ✅ เพิ่มบรรทัดนี้
-        });
-        
-    } catch (error) {
-        console.error('❌ Save summary error:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'เกิดข้อผิดพลาดในการบันทึกสรุป',
-            details: error.message
-        });
-    } finally {
-        if (connection) connection.release();
-    }
-});
-// 16. Get online users
-app.get('/api/users/online', authenticateToken, async (req, res) => {
-    let connection;
-    try {
-        connection = await getConnection();
-
-        const [users] = await connection.execute(
-            `SELECT u.user_id, u.employee_id, u.username, u.full_name, 
-                    u.profile_image, d.department_name
-             FROM users u
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE u.is_online = TRUE
-             AND u.user_id != ?
-             ORDER BY u.full_name`,
-            [req.user.user_id]
-        );
-
-        res.json({ success: true, users });
-
-    } catch (error) {
-        console.error('Get online users error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
-    } finally {
-        if (connection) connection.release();
-    }
-});
-
-// 17. Leave room
-app.delete('/api/chat-rooms/:roomId/leave', authenticateToken, async (req, res) => {
-    let connection;
-    try {
-        const { roomId } = req.params;
-
-        connection = await getConnection();
-
-        const [rooms] = await connection.execute(
-            'SELECT room_type, department_id FROM chat_rooms WHERE room_id = ?',
-            [roomId]
-        );
-
-        if (rooms.length === 0) {
-            return res.status(404).json({ error: 'ไม่พบห้องสนทนา' });
-        }
-
-        const room = rooms[0];
-
-        if (room.room_type === 'department') {
-            return res.status(400).json({ error: 'ไม่สามารถออกจากห้องแผนกได้' });
-        }
-
-        await connection.execute(
-            'DELETE FROM room_members WHERE room_id = ? AND user_id = ?',
-            [roomId, req.user.user_id]
-        );
-
-        res.json({ success: true, message: 'ออกจากห้องสนทนาสำเร็จ' });
-
-    } catch (error) {
-        console.error('Leave room error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
-    } finally {
-        if (connection) connection.release();
-    }
-});
-
-// Get all users
-// บรรทัดที่ ~1100: มีอยู่แล้ว
-app.get('/api/users', authenticateToken, async (req, res) => {
-    let connection;
-    try {
-        connection = await getConnection();
-        
-        const [users] = await connection.execute(
-            `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.email, 
-                    u.profile_image, u.is_online, u.last_seen, d.department_name
-             FROM users u
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE u.user_id != ?
-             ORDER BY u.is_online DESC, u.full_name`,
-            [req.user.user_id]
-        );
-        
-        res.json({ success: true, users });
-        
-    } catch (error) {
-        console.error('Get all users error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
-    } finally {
-        if (connection) connection.release();
-    }
-});
-
-// Get user by ID
-app.get('/api/users/:userId', authenticateToken, async (req, res) => {
-    let connection;
-    try {
-        const { userId } = req.params;
-        
-        connection = await getConnection();
-        
-        const [users] = await connection.execute(
-            `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.email, 
-                    u.profile_image, u.is_online, u.last_seen, d.department_name
-             FROM users u
-             LEFT JOIN department d ON u.department_id = d.department_id
-             WHERE u.user_id = ?`,
-            [userId]
-        );
-        
-        if (users.length === 0) {
-            return res.status(404).json({ error: 'ไม่พบผู้ใช้งาน' });
-        }
-        
-        res.json({ success: true, user: users[0] });
-        
-    } catch (error) {
-        console.error('Get user error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
-    } finally {
-        if (connection) connection.release();
-    }
-});
-
-// Socket.IO handling - แก้ไขใหม่
+// Socket.IO handling
 const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
@@ -1705,12 +1704,12 @@ io.on('connection', (socket) => {
             socket.username = decoded.username;
             onlineUsers.set(userId, socket.id);
 
-            const connection = await getConnection();
-            await connection.execute(
-                'UPDATE users SET is_online = TRUE, last_seen = NOW() WHERE user_id = ?',
+            const client = await getConnection();
+            await client.query(
+                'UPDATE users SET is_online = TRUE, last_seen = NOW() WHERE user_id = $1',
                 [userId]
             );
-            connection.release();
+            client.release();
 
             // ✅ ส่ง authenticated event กลับไปยัง client
             socket.emit('authenticated', { 
@@ -1729,41 +1728,42 @@ io.on('connection', (socket) => {
     });
 
     socket.on('member_added', (data) => {
-    console.log(`👥 Member added to room ${data.room_id}`);
-    
-    // แจ้งสมาชิกที่ถูกเพิ่ม
-    const memberSocket = onlineUsers.get(data.user_id);
-    if (memberSocket) {
-        io.to(memberSocket).emit('added_to_room', {
+        console.log(`👥 Member added to room ${data.room_id}`);
+        
+        // แจ้งสมาชิกที่ถูกเพิ่ม
+        const memberSocket = onlineUsers.get(data.user_id);
+        if (memberSocket) {
+            io.to(memberSocket).emit('added_to_room', {
+                room_id: data.room_id,
+                room_name: data.room_name,
+                added_by: data.added_by
+            });
+        }
+        
+        // แจ้งสมาชิกคนอื่นๆ ในห้อง
+        socket.to(`room_${data.room_id}`).emit('member_joined', {
             room_id: data.room_id,
-            room_name: data.room_name,
-            added_by: data.added_by
+            user_id: data.user_id
         });
-    }
-    
-    // แจ้งสมาชิกคนอื่นๆ ในห้อง
-    socket.to(`room_${data.room_id}`).emit('member_joined', {
-        room_id: data.room_id,
-        user_id: data.user_id
     });
-});
 
-socket.on('room_created', (data) => {
-    console.log(`🏠 Room created: ${data.room_name}`);
-    // แจ้งเตือนสมาชิกที่ถูกเพิ่ม
-    if (data.member_ids && Array.isArray(data.member_ids)) {
-        data.member_ids.forEach(memberId => {
-            const memberSocket = onlineUsers.get(memberId.toString());
-            if (memberSocket) {
-                io.to(memberSocket).emit('added_to_room', {
-                    room_id: data.room_id,
-                    room_name: data.room_name,
-                    added_by: socket.userId
-                });
-            }
-        });
-    }
-});
+    socket.on('room_created', (data) => {
+        console.log(`🏠 Room created: ${data.room_name}`);
+        // แจ้งเตือนสมาชิกที่ถูกเพิ่ม
+        if (data.member_ids && Array.isArray(data.member_ids)) {
+            data.member_ids.forEach(memberId => {
+                const memberSocket = onlineUsers.get(memberId.toString());
+                if (memberSocket) {
+                    io.to(memberSocket).emit('added_to_room', {
+                        room_id: data.room_id,
+                        room_name: data.room_name,
+                        added_by: socket.userId
+                    });
+                }
+            });
+        }
+    });
+    
     socket.on('user_data', (data) => {
         console.log('📊 User data received:', data);
         if (data.user_id) {
@@ -1816,12 +1816,12 @@ socket.on('room_created', (data) => {
         if (userId) {
             onlineUsers.delete(userId);
 
-            const connection = await getConnection();
-            await connection.execute(
-                'UPDATE users SET is_online = FALSE, last_seen = NOW() WHERE user_id = ?',
+            const client = await getConnection();
+            await client.query(
+                'UPDATE users SET is_online = FALSE, last_seen = NOW() WHERE user_id = $1',
                 [userId]
             );
-            connection.release();
+            client.release();
 
             socket.broadcast.emit('user_offline', { user_id: userId });
         }
@@ -1859,28 +1859,22 @@ app.get('/reset-password', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
 });
 
-// Error handling
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    
-    if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({ error: 'ไฟล์มีขนาดใหญ่เกิน 10MB' });
-        }
-    }
-    
-    res.status(500).json({ 
-        error: 'เกิดข้อผิดพลาดในระบบ',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+// เพิ่ม route สำหรับหน้ารายงาน
+app.get('/report', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'report.html'));
 });
+
+app.get('/report/:summaryId', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'report.html'));
+});
+
 // เพิ่ม API สำหรับดึงข้อมูลรายละเอียดสรุป
 app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
-    let connection;
+    let client;
     try {
         const { id, room_id } = req.query;
         
-        connection = await getConnection();
+        client = await getConnection();
         
         let summaryData = null;
         let roomData = null;
@@ -1889,33 +1883,30 @@ app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
         if (id) {
             console.log(`🔍 กำลังดึงสรุป ID: ${id}`);
             
-            const [summaries] = await connection.execute(
+            const summariesResult = await client.query(
                 `SELECT * FROM chat_summary_new 
-                 WHERE summary_id = ? OR id = ?
+                 WHERE summary_id = $1 OR id::text = $2
                  ORDER BY created_at DESC LIMIT 1`,
                 [id, id]
             );
             
-            if (summaries.length > 0) {
-                summaryData = summaries[0];
+            if (summariesResult.rows.length > 0) {
+                summaryData = summariesResult.rows[0];
                 console.log(`✅ พบข้อมูลสรุป: ${summaryData.summary_id}`);
             }
         }
         
         // 2. ดึงข้อมูลห้อง
         let roomId = room_id;
-        if (summaryData && summaryData.room_id) {
-            roomId = summaryData.room_id;
-        }
         
         if (roomId) {
-            const [rooms] = await connection.execute(
-                'SELECT room_id, room_name FROM chat_rooms WHERE room_id = ?',
+            const roomsResult = await client.query(
+                'SELECT room_id, room_name FROM chat_rooms WHERE room_id = $1',
                 [roomId]
             );
             
-            if (rooms.length > 0) {
-                roomData = rooms[0];
+            if (roomsResult.rows.length > 0) {
+                roomData = roomsResult.rows[0];
                 console.log(`✅ พบข้อมูลห้อง: ${roomData.room_name}`);
             }
         }
@@ -1924,15 +1915,15 @@ app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
         if (!summaryData && roomId) {
             console.log(`🔍 หาสรุปล่าสุดจากห้อง ${roomId}`);
             
-            const [latestSummaries] = await connection.execute(
+            const latestSummariesResult = await client.query(
                 `SELECT * FROM chat_summary_new 
-                 WHERE room_id = ?
+                 WHERE room_id = $1
                  ORDER BY created_at DESC LIMIT 1`,
                 [roomId]
             );
             
-            if (latestSummaries.length > 0) {
-                summaryData = latestSummaries[0];
+            if (latestSummariesResult.rows.length > 0) {
+                summaryData = latestSummariesResult.rows[0];
                 console.log(`✅ พบสรุปล่าสุด: ${summaryData.summary_id}`);
             }
         }
@@ -1951,32 +1942,33 @@ app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
         let lastMessageTime = '';
         
         if (roomId) {
-            const [stats] = await connection.execute(
+            const statsResult = await client.query(
                 `SELECT 
                     COUNT(*) as message_count,
                     MIN(DATE(created_at)) as min_date,
                     MAX(DATE(created_at)) as max_date,
-                    MIN(TIME(created_at)) as min_time,
-                    MAX(TIME(created_at)) as max_time
+                    MIN(created_at::time) as min_time,
+                    MAX(created_at::time) as max_time
                 FROM messages 
-                WHERE room_id = ?`,
+                WHERE room_id = $1`,
                 [roomId]
             );
             
-            if (stats.length > 0) {
-                messageCount = stats[0].message_count;
+            if (statsResult.rows.length > 0) {
+                const stats = statsResult.rows[0];
+                messageCount = parseInt(stats.message_count) || 0;
                 
-                if (stats[0].min_date && stats[0].max_date) {
-                    const minDate = new Date(stats[0].min_date).toLocaleDateString('th-TH');
-                    const maxDate = new Date(stats[0].max_date).toLocaleDateString('th-TH');
+                if (stats.min_date && stats.max_date) {
+                    const minDate = new Date(stats.min_date).toLocaleDateString('th-TH');
+                    const maxDate = new Date(stats.max_date).toLocaleDateString('th-TH');
                     
                     if (minDate === maxDate) {
-                        dateRange = `${minDate} ${stats[0].min_time || '00:00'} - ${stats[0].max_time || '23:59'}`;
+                        dateRange = `${minDate} ${stats.min_time?.substring(0,5) || '00:00'} - ${stats.max_time?.substring(0,5) || '23:59'}`;
                     } else {
                         dateRange = `${minDate} - ${maxDate}`;
                     }
                     
-                    lastMessageTime = stats[0].max_time || '';
+                    lastMessageTime = stats.max_time?.substring(0,5) || '';
                 }
             }
         }
@@ -1986,7 +1978,7 @@ app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
             summary: summaryData.summary || '',
             chat_content: summaryData.chat_content || '',
             summary_id: summaryData.summary_id,
-            summary_title: summaryData.summary_title || `สรุป: ${roomData?.room_name || 'ห้องไม่ทราบ'}`,
+            summary_title: summaryData.summary || `สรุป: ${roomData?.room_name || 'ห้องไม่ทราบ'}`,
             room_name: roomData ? roomData.room_name : 'ไม่ทราบห้อง',
             room_id: roomId,
             created_at: summaryData.created_at,
@@ -2011,18 +2003,10 @@ app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
             details: error.message
         });
     } finally {
-        if (connection) connection.release();
+        if (client) client.release();
     }
 });
-// เพิ่ม route สำหรับหน้ารายงาน
-app.get('/report', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'report.html'));
-});
 
-// หรือถ้าต้องการแบบดึงข้อมูลจากสรุปที่บันทึกไว้
-app.get('/report/:summaryId', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'report.html'));
-});
 // Helper function สำหรับสร้าง prompt
 function createSummaryPrompt(messages, customInstruction = null) {
     const basePrompt = `
@@ -2050,60 +2034,27 @@ ${customInstruction ? `\n**คำแนะนำเพิ่มเติม:** $
     return basePrompt;
 }
 
-
-
-// Fallback function ถ้า AI ไม่ทำงาน
-// แก้ไขฟังก์ชัน createFallbackSummary
-function createFallbackSummary(messages, roomName = 'ไม่ทราบห้อง') {
-    try {
-        if (!messages || messages.length === 0) {
-            return "ไม่พบข้อความสำหรับสรุป";
+// Error handling
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'ไฟล์มีขนาดใหญ่เกิน 10MB' });
         }
-        
-        const messageCount = messages.length;
-        const users = new Set(messages.map(m => m.full_name).filter(Boolean));
-        const dates = new Set(messages.map(m => m.date).filter(Boolean));
-        const times = messages.map(m => m.time).filter(Boolean);
-        
-        // เรียงลำดับเวลา
-        times.sort();
-        const timeRange = times.length > 0 ? `${times[0]} - ${times[times.length-1]}` : 'ไม่ทราบเวลา';
-        const firstDate = Array.from(dates)[0] || new Date().toLocaleDateString('th-TH');
-        
-        // สรุปตามรูปแบบตัวอย่างที่ให้มา
-        return `# สรุปการสนทนา
-
-${messageCount} ข้อความ  
-${timeRange}  
-${firstDate}
-
-**สรุปการสนทนาในห้อง: ${roomName} (สรุปแบบฟื้นฐาน)**
-
-## 1. ภาพรวม
-- ${firstDate} - ผู้ร่วมสนทนา ${users.size} คน - ${firstDate} - ช่วงเวลา ${timeRange}
-
-## 2. ประเด็นสำคัญ
-- ไม่พบคำสั่งคัดเลือก - การสนทนานี้ไม่เคยมีด้วย
-
-## 3. คำแนะนำ
-- สรุปนี้สร้างโดยระบบพื้นฐาน
-- ตรวจสอบการตั้งค่า **GEMINI_API_KEY** ในไฟล์ .env สำหรับสรุปละเอียด
-- API Key ฟรีได้ที่: [https://makersuite.google.com/app/apikey](https://makersuite.google.com/app/apikey)
-
----
-
-*localhost:3000/chat*`;
-        
-    } catch (error) {
-        console.error('Fallback summary error:', error);
-        return `**ไม่สามารถสรุปการสนทนาได้ในขณะนี้**\n\nข้อผิดพลาด: ${error.message}`;
     }
-}
+    
+    res.status(500).json({ 
+        error: 'เกิดข้อผิดพลาดในระบบ',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📁 Database: ${process.env.DB_NAME || 'ChatSMHKorat'}`);
+    console.log(`📁 Database: Supabase PostgreSQL`);
     console.log(`🌐 Access: http://localhost:${PORT}`);
     console.log(`🗣️  Language: Thai (UTF-8)`);
 });
