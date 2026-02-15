@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานสรุปการสนทนาโดย AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            font-family: 'Sarabun', 'Kanit', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            padding: 20px;
+        }
+        
+        .report-container {
+            max-width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            padding: 25mm;
+            position: relative;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .report-container {
+                box-shadow: none;
+                padding: 15mm;
+                margin: 0;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+        
+        .header {
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .hospital-name {
+            color: #0d6efd;
+            font-weight: 700;
+            font-size: 24px;
+        }
+        
+        .report-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .metadata-box {
+            background: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .section-title {
+            color: #0d6efd;
+            font-weight: 600;
+            margin-top: 25px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .summary-content {
+            line-height: 1.8;
+            font-size: 16px;
+            white-space: pre-line;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .keywords-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .keyword-badge {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-badge {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-followup {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px dashed #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .btn-report {
+            padding: 12px 25px;
+            font-weight: 600;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: #0d6efd;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .print-watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 80px;
+            color: rgba(0,0,0,0.05);
+            font-weight: bold;
+            z-index: -1;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="print-watermark">รายงานสรุปการสนทนา</div>
+    
+    <div class="report-container" id="report-content">
+        <!-- 1️⃣ ส่วนหัวรายงาน -->
+        <div class="header">
+            <div class="d-flex align-items-center mb-3">
+                <div class="logo">
+                    SMH
+                </div>
+                <div>
+                    <div class="hospital-name">โรงพยาบาลเซนต์เมรี่</div>
+                    <div class="text-muted">Saint Mary's Hospital</div>
+                </div>
+            </div>
+            
+            <h1 class="report-title">รายงานสรุปการสนทนาโดย AI</h1>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                        <span id="report-date">กำลังโหลด...</span>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="d-flex align-items-center justify-content-md-end mb-2">
+                        <i class="fas fa-clock me-2 text-primary"></i>
+                        <span id="report-time">กำลังโหลด...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2️⃣ ข้อมูลอ้างอิงรายงาน -->
+        <h4 class="section-title"><i class="fas fa-info-circle me-2"></i>ข้อมูลอ้างอิงรายงาน</h4>
+        <div class="metadata-box">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div><strong><i class="fas fa-hashtag me-2"></i>รหัสรายงาน:</strong> <span id="report-id" class="text-primary fw-bold">-</span></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div><strong><i class="fas fa-door-open me-2"></i>ห้องแชท:</strong> <span id="room-name">-</span></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div><strong><i class="fas fa-calendar-day me-2"></i>ช่วงวันที่:</strong> <span id="chat-date-range">-</span></div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div><strong><i class="fas fa-user-cog me-2"></i>ผู้สร้างรายงาน:</strong> <span id="report-creator">ระบบสรุปการสนทนาด้วย AI</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3️⃣ เนื้อหาสรุปการสนทนา -->
+        <h4 class="section-title"><i class="fas fa-comment-dots me-2"></i>เนื้อหาสรุปการสนทนา</h4>
+        <div class="summary-content" id="summary-content">
+            กำลังโหลดข้อมูลสรุป...
+        </div>
+
+        <!-- 4️⃣ ประเด็นสำคัญ -->
+        <h4 class="section-title"><i class="fas fa-key me-2"></i>ประเด็นสำคัญ</h4>
+        <div id="keywords-container" class="keywords-container">
+            <!-- Keywords will be generated here -->
+        </div>
+
+        <!-- 5️⃣ สถานะหรือข้อสรุป -->
+        <h4 class="section-title"><i class="fas fa-clipboard-check me-2"></i>สถานะการให้บริการ</h4>
+        <div id="status-container">
+            <!-- Status will be generated here -->
+        </div>
+
+        <!-- 6️⃣ ปุ่มการทำงาน (จะถูกซ่อนเมื่อพิมพ์) -->
+        <div class="no-print text-center mt-4">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                ใช้ปุ่มด้านล่างขวาของหน้าจอเพื่อพิมพ์หรือบันทึกรายงาน
+            </div>
+        </div>
+
+        <!-- 7️⃣ ส่วนท้ายรายงาน -->
+        <div class="footer">
+            <div class="mb-2">
+                <i class="fas fa-sync-alt me-2"></i>
+                <span id="generated-time">วันที่ระบบสร้างรายงาน: กำลังโหลด...</span>
+            </div>
+            <div class="text-muted">
+                <i class="fas fa-certificate me-2"></i>
+                รายงานนี้จัดทำโดยระบบสรุปการสนทนาด้วย AI สำหรับใช้เป็นเอกสารอ้างอิงภายในโรงพยาบาลเท่านั้น
+            </div>
+            <div class="mt-3 small">
+                <i class="fas fa-brain me-2"></i>
+                <span id="ai-summary">ระบบ AI ได้ประมวลผลและสรุปการสนทนาอัตโนมัติจากข้อมูลที่มี</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ปุ่ม Action -->
+    <div class="action-buttons no-print">
+        <button id="btn-print" class="btn btn-primary btn-report shadow">
+            <i class="fas fa-print"></i> พิมพ์รายงาน
+        </button>
+        <button id="btn-pdf" class="btn btn-success btn-report shadow">
+            <i class="fas fa-file-pdf"></i> PDF
+        </button>
+        <button id="btn-back" class="btn btn-outline-secondary btn-report shadow">
+            <i class="fas fa-arrow-left"></i> กลับ
+        </button>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- html2pdf.js for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ตั้งค่าวันที่และเวลา
+            const now = new Date();
+            const thaiDate = now.toLocaleDateString('th-TH', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const thaiTime = now.toLocaleTimeString('th-TH');
+            
+            document.getElementById('report-date').textContent = thaiDate;
+            document.getElementById('report-time').textContent = thaiTime;
+            document.getElementById('generated-time').textContent = 
+                `วันที่ระบบสร้างรายงาน: ${thaiDate} เวลา ${thaiTime}`;
+            
+            // ดึงข้อมูลจาก URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const summaryId = urlParams.get('id') || 'SUMMARY_' + Date.now();
+            const roomId = urlParams.get('room_id');
+            
+            // ตั้งค่าข้อมูลเบื้องต้น
+            document.getElementById('report-id').textContent = summaryId;
+            
+            // ถ้ามี room_id ให้ดึงข้อมูลจาก API
+            if (roomId) {
+                loadSummaryData(roomId, summaryId);
+            } else {
+                // ใช้ข้อมูลตัวอย่างถ้าไม่มี room_id
+                loadSampleData();
+            }
+            
+            // ปุ่ม Print
+            document.getElementById('btn-print').addEventListener('click', function() {
+                window.print();
+            });
+            
+            // ปุ่ม PDF
+            document.getElementById('btn-pdf').addEventListener('click', function() {
+                generatePDF();
+            });
+            
+            // ปุ่มกลับ
+            document.getElementById('btn-back').addEventListener('click', function() {
+                if (history.length > 1) {
+                    history.back();
+                } else {
+                    window.location.href = '/chat';
+                }
+            });
+        });
+        
+        function loadSummaryData(roomId, summaryId) {
+            // เรียก API เพื่อดึงข้อมูลสรุป
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            
+            if (!token) {
+                alert('กรุณาเข้าสู่ระบบก่อน');
+                window.location.href = '/login';
+                return;
+            }
+            
+            fetch(`/api/chat-summary/details?id=${summaryId}&room_id=${roomId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateReportContent(data);
+                } else {
+                    console.error('Error loading summary:', data.error);
+                    loadSampleData();
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                loadSampleData();
+            });
+        }
+        
+        function updateReportContent(data) {
+            // อัพเดทเนื้อหาสรุป
+            if (data.summary) {
+                document.getElementById('summary-content').textContent = data.summary;
+            }
+            
+            // อัพเดทชื่อห้อง
+            if (data.room_name) {
+                document.getElementById('room-name').textContent = data.room_name;
+            }
+            
+            // อัพเดทช่วงวันที่
+            if (data.date_range) {
+                document.getElementById('chat-date-range').textContent = data.date_range;
+            }
+            
+            // สร้าง Keywords
+            generateKeywords(data.summary || '');
+            
+            // สร้างสถานะ
+            generateStatus(data.summary || '');
+            
+            // อัพเดท AI summary text
+            updateAISummaryText(data);
+        }
+        
+        function generateKeywords(text) {
+            const keywordsContainer = document.getElementById('keywords-container');
+            keywordsContainer.innerHTML = '';
+            
+            // คำสำคัญทั่วไปในโรงพยาบาล
+            const commonKeywords = [
+                { keyword: 'การนัดหมาย', icon: 'fa-calendar-check', color: '#0d6efd' },
+                { keyword: 'อาการ', icon: 'fa-stethoscope', color: '#dc3545' },
+                { keyword: 'ค่าใช้จ่าย', icon: 'fa-money-bill-wave', color: '#28a745' },
+                { keyword: 'สิทธิ์การรักษา', icon: 'fa-id-card', color: '#ffc107' },
+                { keyword: 'ยา', icon: 'fa-pills', color: '#6f42c1' },
+                { keyword: 'ตรวจ', icon: 'fa-search', color: '#20c997' },
+                { keyword: 'ปรึกษา', icon: 'fa-comments', color: '#17a2b8' },
+                { keyword: 'เอกสาร', icon: 'fa-file-alt', color: '#fd7e14' }
+            ];
+            
+            // ตรวจสอบว่ามีคำสำคัญในเนื้อหาหรือไม่
+            const foundKeywords = commonKeywords.filter(item => 
+                text.toLowerCase().includes(item.keyword.toLowerCase())
+            );
+            
+            // ถ้าไม่พบ keywords ให้ใช้ตัวอย่าง
+            const displayKeywords = foundKeywords.length > 0 ? foundKeywords : commonKeywords.slice(0, 4);
+            
+            displayKeywords.forEach(item => {
+                const badge = document.createElement('div');
+                badge.className = 'keyword-badge';
+                badge.innerHTML = `
+                    <i class="fas ${item.icon}"></i>
+                    ${item.keyword}
+                `;
+                badge.style.backgroundColor = item.color + '20';
+                badge.style.color = item.color;
+                badge.style.border = `1px solid ${item.color}40`;
+                keywordsContainer.appendChild(badge);
+            });
+        }
+        
+        function generateStatus(text) {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = '';
+            
+            let status = {
+                text: 'ให้ข้อมูลเรียบร้อยแล้ว',
+                type: 'completed',
+                icon: 'fa-check-circle',
+                description: 'การสนทนาเสร็จสิ้น ข้อมูลได้รับการบันทึกเรียบร้อย'
+            };
+            
+            // ตรวจสอบสถานะจากเนื้อหา
+            const lowerText = text.toLowerCase();
+            
+            if (lowerText.includes('รอ') || lowerText.includes('ติดตาม') || lowerText.includes('คอย')) {
+                status = {
+                    text: 'รอการติดตามเพิ่มเติม',
+                    type: 'pending',
+                    icon: 'fa-clock',
+                    description: 'ต้องการข้อมูลเพิ่มเติมหรือรอการติดตามกลับ'
+                };
+            } else if (lowerText.includes('ติดต่อกลับ') || lowerText.includes('โทรกลับ') || lowerText.includes('แจ้งผล')) {
+                status = {
+                    text: 'ต้องติดต่อกลับผู้ป่วย',
+                    type: 'followup',
+                    icon: 'fa-phone-alt',
+                    description: 'ต้องติดต่อกลับผู้ป่วยหรือญาติเพื่อแจ้งข้อมูลเพิ่มเติม'
+                };
+            }
+            
+            const statusElement = document.createElement('div');
+            statusElement.className = `status-badge status-${status.type}`;
+            statusElement.innerHTML = `
+                <i class="fas ${status.icon} me-2"></i>
+                <strong>${status.text}</strong>
+                <div class="mt-2 small">${status.description}</div>
+            `;
+            
+            statusContainer.appendChild(statusElement);
+        }
+        
+        function updateAISummaryText(data) {
+            const aiSummary = document.getElementById('ai-summary');
+            const messageCount = data.message_count || 'จำนวนหนึ่ง';
+            const dateRange = data.date_range || 'ช่วงเวลาที่กำหนด';
+            
+            aiSummary.textContent = 
+                `ระบบ AI ได้ประมวลผลและสรุปการสนทนาจาก ${messageCount} ข้อความในช่วง ${dateRange}`;
+        }
+        
+        function loadSampleData() {
+            // ข้อมูลตัวอย่างสำหรับแสดงผล
+            const sampleSummary = `การสนทนาในห้อง "คลินิกทันตกรรม" ระหว่างวันที่ 9 กุมภาพันธ์ 2566 เวลา 23:29 ถึง 08:10
+
+ประเด็นสำคัญที่ปรากฏในการสนทนา:
+- ผู้ป่วยสอบถามเกี่ยวกับการนัดหมายตรวจฟันและค่าใช้จ่ายในการอุดฟัน
+- เจ้าหน้าที่ให้ข้อมูลเกี่ยวกับสิทธิ์การรักษาตามประกันสุขภาพ
+- มีการพูดถึงอาการเสียวฟันที่ผู้ป่วยกำลังประสบอยู่
+- ตกลงนัดหมายตรวจฟันในวันจันทร์ที่ 13 กุมภาพันธ์ 2566 เวลา 09:00 น.
+
+สรุป: การสนทนาสิ้นสุดลงด้วยการนัดหมายตรวจฟันและให้ข้อมูลเกี่ยวกับสิทธิ์การรักษาเรียบร้อยแล้ว`;
+
+            document.getElementById('summary-content').textContent = sampleSummary;
+            document.getElementById('room-name').textContent = 'คลินิกทันตกรรม';
+            document.getElementById('chat-date-range').textContent = '9 กุมภาพันธ์ 2566';
+            
+            generateKeywords(sampleSummary);
+            generateStatus(sampleSummary);
+            
+            const aiSummary = document.getElementById('ai-summary');
+            aiSummary.textContent = 'ระบบ AI ได้ประมวลผลและสรุปการสนทนาจาก 6 ข้อความในช่วง 23:29 - 08:10 น.';
+        }
+        
+        function generatePDF() {
+            const element = document.getElementById('report-content');
+            const options = {
+                margin: [15, 15, 15, 15],
+                filename: `รายงานสรุปการสนทนา_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                }
+            };
+            
+            // แสดง loading
+            const btn = document.getElementById('btn-pdf');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง PDF...';
+            btn.disabled = true;
+            
+            html2pdf().set(options).from(element).save().then(() => {
+                // คืนค่าปุ่ม
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>

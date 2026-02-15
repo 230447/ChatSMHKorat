@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียน - โรงพยาบาลเซนต์เมรี่</title>
+    <link rel="stylesheet" href="/assets/css/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .department-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .loading-spinner-small {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Logo and Header -->
+            <div class="auth-header">
+                <div class="logo">
+                    <i class="fas fa-hospital"></i>
+                    <h1>โรงพยาบาลเซนต์เมรี่</h1>
+                </div>
+                <h2>ลงทะเบียนผู้ใช้งานใหม่</h2>
+                <p>กรอกข้อมูลเพื่อสร้างบัญชีผู้ใช้ระบบสื่อสารภายในโรงพยาบาล</p>
+            </div>
+
+            <!-- Registration Form -->
+            <form id="registerForm" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employee_id">
+                            <i class="fas fa-id-card"></i> รหัสพนักงาน
+                        </label>
+                        <input type="text" id="employee_id" name="employee_id" required 
+                               placeholder="เช่น SMH001, SMH002">
+                        <div class="error-message" id="employeeIdError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">
+                            <i class="fas fa-user"></i> ชื่อผู้ใช้
+                        </label>
+                        <input type="text" id="username" name="username" required 
+                               placeholder="ชื่อผู้ใช้ภาษาอังกฤษ">
+                        <div class="error-message" id="usernameError"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="full_name">
+                            <i class="fas fa-signature"></i> ชื่อ-นามสกุล
+                        </label>
+                        <input type="text" id="full_name" name="full_name" required 
+                               placeholder="ชื่อ-นามสกุลเต็ม">
+                        <div class="error-message" id="fullNameError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> อีเมล
+                        </label>
+                        <input type="email" id="email" name="email" 
+                               placeholder="อีเมล@hospital.com">
+                        <div class="error-message" id="emailError"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="department_id">
+                            <i class="fas fa-building"></i> แผนก
+                        </label>
+                        <select id="department_id" name="department_id" required>
+                            <option value="">กำลังโหลดแผนก...</option>
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                        <div class="department-loading" id="departmentLoading" style="display: none;">
+                            <div class="loading-spinner-small"></div>
+                            <span>กำลังโหลดแผนก...</span>
+                        </div>
+                        <div class="error-message" id="departmentError"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> รหัสผ่าน
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="password" name="password" required 
+                                   placeholder="รหัสผ่านอย่างน้อย 6 ตัวอักษร">
+                            <button type="button" class="toggle-password" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="error-message" id="passwordError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm_password">
+                            <i class="fas fa-lock"></i> ยืนยันรหัสผ่าน
+                        </label>
+                        <div class="password-input">
+                            <input type="password" id="confirm_password" name="confirm_password" required 
+                                   placeholder="กรอกรหัสผ่านอีกครั้ง">
+                            <button type="button" class="toggle-password" id="toggleConfirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="error-message" id="confirmPasswordError"></div>
+                    </div>
+                </div>
+
+                <div class="form-terms">
+                    <label class="checkbox">
+                        <input type="checkbox" id="acceptTerms" required>
+                        <span>ฉันยอมรับ <a href="#" class="terms-link">ข้อกำหนดและเงื่อนไข</a> 
+                              และ <a href="#" class="terms-link">นโยบายความเป็นส่วนตัว</a></span>
+                    </label>
+                    <div class="error-message" id="termsError"></div>
+                </div>
+
+                <button type="submit" class="btn-primary btn-block">
+                    <i class="fas fa-user-plus"></i> ลงทะเบียน
+                </button>
+
+                <div class="auth-footer">
+                    <p>มีบัญชีผู้ใช้แล้ว? <a href="/login">เข้าสู่ระบบที่นี่</a></p>
+                    <a href="/" class="back-home">
+                        <i class="fas fa-arrow-left"></i> กลับสู่หน้าหลัก
+                    </a>
+                </div>
+            </form>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <p>กำลังลงทะเบียน...</p>
+            </div>
+        </div>
+
+        <!-- Hospital Info -->
+        <div class="hospital-info">
+            <div class="info-content">
+                <h3><i class="fas fa-info-circle"></i> ข้อควรรู้ก่อนลงทะเบียน</h3>
+                <ul>
+                    <li><i class="fas fa-check-circle"></i> ใช้รหัสพนักงานจริงในการลงทะเบียน</li>
+                    <li><i class="fas fa-check-circle"></i> เลือกแผนกที่สังกัดให้ถูกต้อง</li>
+                    <li><i class="fas fa-check-circle"></i> รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร</li>
+                    <li><i class="fas fa-check-circle"></i> ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษเท่านั้น</li>
+                    <li><i class="fas fa-check-circle"></i> ข้อมูลทั้งหมดจะถูกเก็บเป็นความลับ</li>
+                </ul>
+                
+                <div class="feature-highlight">
+                    <h4><i class="fas fa-star"></i> หลังจากลงทะเบียนสำเร็จ</h4>
+                    <p>คุณจะสามารถเข้าถึงระบบสื่อสารภายในโรงพยาบาลได้ทันที</p>
+                </div>
+                
+                <div class="contact-support">
+                    <h4><i class="fas fa-headset"></i> ต้องการความช่วยเหลือ?</h4>
+                    <p>ติดต่อแผนกเทคโนโลยีสารสนเทศ โทร. 044-XXX-XXX ต่อ 123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Password toggle functions
+        function setupPasswordToggle(inputId, buttonId) {
+            const toggleBtn = document.getElementById(buttonId);
+            const passwordInput = document.getElementById(inputId);
+            
+            if (toggleBtn && passwordInput) {
+                toggleBtn.addEventListener('click', function() {
+                    const icon = this.querySelector('i');
+                    
+                    if (passwordInput.type === 'password') {
+                        passwordInput.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        passwordInput.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            }
+        }
+        
+        // Set up password toggles
+        setupPasswordToggle('password', 'togglePassword');
+        setupPasswordToggle('confirm_password', 'toggleConfirmPassword');
+        
+        // Load departments function
+        async function loadDepartments() {
+            try {
+                // Show loading
+                document.getElementById('departmentLoading').style.display = 'flex';
+                document.getElementById('department_id').disabled = true;
+                
+                const response = await fetch('/api/departments');
+                const data = await response.json();
+                
+                const select = document.getElementById('department_id');
+                
+                if (data.success && data.departments && data.departments.length > 0) {
+                    // Clear existing options
+                    select.innerHTML = '<option value="">เลือกแผนกที่สังกัด</option>';
+                    
+                    // Add department options
+                    data.departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.department_id;
+                        option.textContent = dept.department_name;
+                        select.appendChild(option);
+                    });
+                    
+                    // Hide loading
+                    document.getElementById('departmentLoading').style.display = 'none';
+                    document.getElementById('department_id').disabled = false;
+                    
+                    console.log('Loaded ' + data.departments.length + ' departments');
+                } else {
+                    select.innerHTML = '<option value="">ไม่พบข้อมูลแผนก</option>';
+                    document.getElementById('departmentLoading').style.display = 'none';
+                    console.error('No departments found or API error:', data);
+                }
+            } catch (error) {
+                console.error('Failed to load departments:', error);
+                const select = document.getElementById('department_id');
+                select.innerHTML = '<option value="">เกิดข้อผิดพลาดในการโหลดแผนก</option>';
+                document.getElementById('departmentLoading').style.display = 'none';
+                
+                // Try backup data
+                loadBackupDepartments();
+            }
+        }
+        
+        // Backup departments data
+        function loadBackupDepartments() {
+            const backupDepartments = [
+                { department_id: 1, department_name: 'แผนกเกษตรกรรม' },
+                { department_id: 2, department_name: 'แผนกประชาสัมพันธ์ตลาด' },
+                { department_id: 3, department_name: 'แผนกสิทธิประโยชน์' },
+                { department_id: 4, department_name: 'แผนกเวชระเบียน' },
+                { department_id: 5, department_name: 'แผนกลูกค้าสัมพันธ์และลงทะเบียน' },
+                { department_id: 6, department_name: 'แผนกเทคโนโลยีสารสนเทศ' },
+                { department_id: 7, department_name: 'แผนกอภิบาล' },
+                { department_id: 8, department_name: 'ศูนย์วางแผนและพัฒนา' },
+                { department_id: 9, department_name: 'แผนกโทรศัพท์' },
+                { department_id: 10, department_name: 'แผนกรักษาความปลอดภัย' },
+                { department_id: 11, department_name: 'แผนกการเงิน' },
+                { department_id: 12, department_name: 'แผนกบัญชี-งานวิเคราะห์' },
+                { department_id: 13, department_name: 'แผนกจัดซื้อ' },
+                { department_id: 14, department_name: 'แผนกคลัง' },
+                { department_id: 15, department_name: 'ศูนย์คุณภาพ' },
+                { department_id: 16, department_name: 'คลินิกทันตกรรม' },
+                { department_id: 17, department_name: 'แผนกอุบัติเหตุฉุกเฉินและศูนย์รถพยาบาล' },
+                { department_id: 18, department_name: 'แผนกผ่าตัด' },
+                { department_id: 19, department_name: 'แผนกบริการเปล' },
+                { department_id: 20, department_name: 'แผนกผู้ป่วยในชั้น 4 มารีย์' },
+                { department_id: 21, department_name: 'แผนกผู้ป่วยในชั้น 4 วังกาแวร์' },
+                { department_id: 22, department_name: 'แผนกผู้ป่วยในชั้น 5 มารีย์' },
+                { department_id: 23, department_name: 'แผนกผู้ป่วยในชั้น 5 วังกาแวร์' },
+                { department_id: 24, department_name: 'แผนกผู้ป่วยในชั้น 6 มารีย์' },
+                { department_id: 25, department_name: 'แผนกผู้ป่วยในชั้น 6 วังกาแวร์' },
+                { department_id: 26, department_name: 'แผนกผู้ป่วยในชั้น 7 วังกาแวร์' },
+                { department_id: 27, department_name: 'แผนกผู้ป่วยในชั้น 8 วังกาแวร์' },
+                { department_id: 28, department_name: 'แผนกผู้ป่วยวิกฤต' },
+                { department_id: 29, department_name: 'แผนกเภสัชกรรม' },
+                { department_id: 30, department_name: 'แผนกรังสีวิทยา' },
+                { department_id: 31, department_name: 'ผู้จัดการและรองผู้จัดการ' },
+                { department_id: 32, department_name: 'งานนิติกร' },
+                { department_id: 33, department_name: 'งานที่ดิน' },
+                { department_id: 34, department_name: 'ฝ่ายการแพทย์' },
+                { department_id: 35, department_name: 'นักปฏิบัติการการแพทย์ฉุกเฉิน' },
+                { department_id: 36, department_name: 'เลขานุการฝ่ายการแพทย์' },
+                { department_id: 37, department_name: 'ผู้ช่วยแพทย์แผนจีน' },
+                { department_id: 38, department_name: 'ศูนย์ตรวจสุขภาพ' },
+                { department_id: 39, department_name: 'ตรวจการ' },
+                { department_id: 40, department_name: 'ฝ่ายการพยาบาล' },
+                { department_id: 41, department_name: 'คลินิกอายุรกรรม' },
+                { department_id: 42, department_name: 'คลินิกศัลยกรรม/กระดูกและข้อ' },
+                { department_id: 43, department_name: 'คลินิกสูตินรเวช-กุมารเวช' },
+                { department_id: 44, department_name: 'คลินิกเฉพาะทาง(จักษุ หู จมูก คอ)' },
+                { department_id: 45, department_name: 'แผนกห้องปฏิบัติการ' },
+                { department_id: 46, department_name: 'แผนกกายภาพบำบัด' },
+                { department_id: 47, department_name: 'แผนกจ่ายกลาง' },
+                { department_id: 48, department_name: 'แผนกวิศวกรรมการแพทย์' },
+                { department_id: 49, department_name: 'แผนกเคหะบริการ' },
+                { department_id: 50, department_name: 'บริการส่วนหน้า' },
+                { department_id: 51, department_name: 'แผนกทรัพยากรบุคคล งานธุรการ และกองเลขานุการ' },
+                { department_id: 52, department_name: 'แผนกซ่อมบำรุงและก่อสร้าง' },
+                { department_id: 53, department_name: 'แผนกยานพาหนะ' }
+            ];
+            
+            const select = document.getElementById('department_id');
+            select.innerHTML = '<option value="">เลือกแผนกที่สังกัด</option>';
+            
+            backupDepartments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept.department_id;
+                option.textContent = dept.department_name;
+                select.appendChild(option);
+            });
+            
+            document.getElementById('departmentLoading').style.display = 'none';
+            document.getElementById('department_id').disabled = false;
+            console.log('Loaded ' + backupDepartments.length + ' departments from backup');
+        }
+        
+        // Form validation
+        function validateForm() {
+            let isValid = true;
+            clearErrors();
+            
+            const employeeId = document.getElementById('employee_id').value.trim();
+            const username = document.getElementById('username').value.trim();
+            const fullName = document.getElementById('full_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const departmentId = document.getElementById('department_id').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const acceptTerms = document.getElementById('acceptTerms').checked;
+            
+            // Validate employee ID
+            if (!employeeId) {
+                showError('employeeIdError', 'กรุณากรอกรหัสพนักงาน');
+                isValid = false;
+            } else if (!/^[A-Za-z0-9]+$/.test(employeeId)) {
+                showError('employeeIdError', 'รหัสพนักงานต้องเป็นตัวอักษรและตัวเลขเท่านั้น');
+                isValid = false;
+            }
+            
+            // Validate username
+            if (!username) {
+                showError('usernameError', 'กรุณากรอกชื่อผู้ใช้');
+                isValid = false;
+            } else if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
+                showError('usernameError', 'ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษเท่านั้น');
+                isValid = false;
+            }
+            
+            // Validate full name
+            if (!fullName) {
+                showError('fullNameError', 'กรุณากรอกชื่อ-นามสกุล');
+                isValid = false;
+            }
+            
+            // Validate email
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showError('emailError', 'รูปแบบอีเมลไม่ถูกต้อง');
+                isValid = false;
+            }
+            
+            // Validate department
+            if (!departmentId) {
+                showError('departmentError', 'กรุณาเลือกแผนก');
+                isValid = false;
+            }
+            
+            // Validate password
+            if (!password) {
+                showError('passwordError', 'กรุณากรอกรหัสผ่าน');
+                isValid = false;
+            } else if (password.length < 6) {
+                showError('passwordError', 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+                isValid = false;
+            }
+            
+            // Validate confirm password
+            if (!confirmPassword) {
+                showError('confirmPasswordError', 'กรุณายืนยันรหัสผ่าน');
+                isValid = false;
+            } else if (password !== confirmPassword) {
+                showError('confirmPasswordError', 'รหัสผ่านไม่ตรงกัน');
+                isValid = false;
+            }
+            
+            // Validate terms
+            if (!acceptTerms) {
+                showError('termsError', 'กรุณายอมรับข้อกำหนดและเงื่อนไข');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        // Form submission
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) {
+                return;
+            }
+            
+            const formData = {
+                employee_id: document.getElementById('employee_id').value.trim(),
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value,
+                full_name: document.getElementById('full_name').value.trim(),
+                email: document.getElementById('email').value.trim() || null,
+                department_id: parseInt(document.getElementById('department_id').value)
+            };
+            
+            // Show loading
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Save token and user data
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    alert('ลงทะเบียนสำเร็จ! กำลังเปลี่ยนเส้นทาง...');
+                    
+                    // Redirect to chat
+                    window.location.href = '/chat';
+                } else {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    // Show appropriate error
+                    if (data.error.includes('รหัสพนักงาน') || data.error.includes('ชื่อผู้ใช้')) {
+                        showError('employeeIdError', data.error);
+                    } else {
+                        showError('employeeIdError', 'เกิดข้อผิดพลาดในการลงทะเบียน: ' + data.error);
+                    }
+                }
+            } catch (error) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                showError('employeeIdError', 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+                console.error('Registration error:', error);
+            }
+        });
+        
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+        
+        function clearErrors() {
+            document.querySelectorAll('.error-message').forEach(el => {
+                el.textContent = '';
+                el.style.display = 'none';
+            });
+        }
+        
+        // Load departments when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load departments
+            await loadDepartments();
+            
+            // Check if already logged in
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const response = await fetch('/api/me', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        window.location.href = '/chat';
+                    }
+                } catch (error) {
+                    // Token invalid, clear storage
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

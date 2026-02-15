@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่าโปรไฟล์ - SMH Hospital Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .profile-container {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, #4a6ee0, #6a11cb);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .profile-img-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .profile-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            object-fit: cover;
+        }
+
+        .change-img-btn {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .change-img-btn:hover {
+            background: #45a049;
+            transform: scale(1.1);
+        }
+
+        .profile-info h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .profile-info p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .profile-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: #4a6ee0;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 110, 224, 0.2);
+        }
+
+        .form-group input:read-only {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-cancel {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #e1e5eb;
+        }
+
+        .btn-cancel:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #4a6ee0, #6a11cb);
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: linear-gradient(135deg, #3a5ed0, #5a01bb);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 110, 224, 0.4);
+        }
+
+        .btn-save:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.success {
+            background: #28a745;
+        }
+
+        .toast.error {
+            background: #dc3545;
+        }
+
+        .toast.info {
+            background: #17a2b8;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .loading.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .profile-container {
+                max-width: 100%;
+            }
+            
+            .profile-body {
+                padding: 20px;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <!-- Header -->
+        <div class="profile-header">
+            <button class="back-btn" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
+            <div class="profile-img-container">
+                <img id="profileImage" src="" alt="รูปโปรไฟล์" class="profile-img">
+                <button class="change-img-btn" onclick="triggerFileInput()">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            </div>
+            
+            <div class="profile-info">
+                <h1 id="userFullName">กำลังโหลด...</h1>
+                <p id="userDepartment">แผนก: กำลังโหลด...</p>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="profile-body">
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="employeeId">
+                        <i class="fas fa-id-card"></i> รหัสพนักงาน
+                    </label>
+                    <input type="text" id="employeeId" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">
+                        <i class="fas fa-user"></i> ชื่อผู้ใช้
+                    </label>
+                    <input type="text" id="username" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="fullName">
+                        <i class="fas fa-signature"></i> ชื่อ-นามสกุล
+                    </label>
+                    <input type="text" id="fullName">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i> อีเมล
+                    </label>
+                    <input type="email" id="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="department">
+                        <i class="fas fa-building"></i> แผนก
+                    </label>
+                    <input type="text" id="department" readonly>
+                </div>
+            </form>
+
+            <div class="btn-group">
+                <button type="button" class="btn btn-cancel" onclick="goBack()">
+                    <i class="fas fa-times"></i> ยกเลิก
+                </button>
+                <button type="button" class="btn btn-save" id="saveBtn" onclick="saveProfile()">
+                    <i class="fas fa-save"></i> บันทึก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fas fa-info-circle"></i>
+        <span id="toastMessage">ข้อความ</span>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // ตัวแปร global
+        let currentUser = null;
+        let isChanged = false;
+        let originalData = {};
+
+        // ฟังก์ชันหลักเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 โหลดหน้าโปรไฟล์เรียบร้อย');
+            
+            // ตรวจสอบการล็อกอิน
+            const token = localStorage.getItem('token');
+            if (!token) {
+                showToast('กรุณาเข้าสู่ระบบก่อน', 'error');
+                setTimeout(() => window.location.href = '/login', 2000);
+                return;
+            }
+
+            // โหลดข้อมูลผู้ใช้
+            await loadUserProfile();
+            
+            // ตั้งค่า event listeners
+            setupEventListeners();
+            
+            console.log('✅ ตั้งค่าโปรไฟล์สำเร็จ');
+        });
+
+        // โหลดข้อมูลผู้ใช้จาก API
+        async function loadUserProfile() {
+            showLoading(true);
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.success && data.user) {
+                        currentUser = data.user;
+                        originalData = {
+                            full_name: data.user.full_name,
+                            email: data.user.email,
+                            profile_image: data.user.profile_image
+                        };
+                        
+                        // เติมข้อมูลในฟอร์ม
+                        populateProfileForm(data.user);
+                    } else {
+                        throw new Error('ไม่พบข้อมูลผู้ใช้');
+                    }
+                } else {
+                    throw new Error('โหลดข้อมูลล้มเหลว');
+                }
+            } catch (error) {
+                console.error('❌ โหลดโปรไฟล์ผิดพลาด:', error);
+                showToast('โหลดข้อมูลผู้ใช้ผิดพลาด', 'error');
+                setTimeout(() => window.location.href = '/chat', 3000);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // เติมข้อมูลในฟอร์ม
+        function populateProfileForm(user) {
+            console.log('👤 เติมข้อมูลผู้ใช้:', user);
+            
+            // รูปโปรไฟล์
+            const profileImg = document.getElementById('profileImage');
+            if (profileImg) {
+                profileImg.src = user.profile_image || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+                profileImg.onerror = function() {
+                    this.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+                };
+            }
+            
+            // ข้อมูลทั่วไป
+            document.getElementById('employeeId').value = user.employee_id || '-';
+            document.getElementById('username').value = user.username || '-';
+            document.getElementById('fullName').value = user.full_name || '';
+            document.getElementById('email').value = user.email || '';
+            document.getElementById('department').value = user.department_name || 'ไม่ระบุแผนก';
+            
+            // ชื่อใน header
+            document.getElementById('userFullName').textContent = user.full_name || 'ผู้ใช้ไม่ระบุชื่อ';
+            document.getElementById('userDepartment').textContent = `แผนก: ${user.department_name || 'ไม่ระบุ'}`;
+        }
+
+        // ตั้งค่า event listeners
+        function setupEventListeners() {
+            // ตรวจจับการเปลี่ยนแปลงในฟอร์ม
+            document.getElementById('fullName').addEventListener('input', checkChanges);
+            document.getElementById('email').addEventListener('input', checkChanges);
+            
+            // เปลี่ยนรูปโปรไฟล์
+            document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+            
+            // ปุ่มเปลี่ยนรูป
+            document.getElementById('profileImage').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    triggerFileInput();
+                }
+            });
+        }
+
+        // ตรวจสอบว่ามีการเปลี่ยนแปลงหรือไม่
+        function checkChanges() {
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const profileImage = document.getElementById('imageInput').files[0];
+            
+            isChanged = (
+                fullName !== originalData.full_name ||
+                email !== originalData.email ||
+                profileImage !== undefined
+            );
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = !isChanged;
+        }
+
+        // เรียก input file
+        function triggerFileInput() {
+            console.log('📸 เปิดเลือกไฟล์รูป');
+            document.getElementById('imageInput').click();
+        }
+
+        // จัดการอัพโหลดรูป
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // ตรวจสอบประเภทไฟล์
+            if (!file.type.startsWith('image/')) {
+                showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+                return;
+            }
+            
+            // ตรวจสอบขนาดไฟล์ (ไม่เกิน 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('ไฟล์ใหญ่เกิน 5MB', 'error');
+                return;
+            }
+            
+            // แสดงรูป preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profileImage').src = e.target.result;
+                checkChanges(); // ตรวจสอบการเปลี่ยนแปลง
+                showToast('เลือกรูปภาพแล้ว', 'success');
+            };
+            reader.readAsDataURL(file);
+            
+            console.log('✅ เลือกรูปแล้ว:', file.name);
+        }
+
+        // บันทึกโปรไฟล์
+        async function saveProfile() {
+            if (!isChanged) return;
+            
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            
+            // ตรวจสอบข้อมูล
+            if (!fullName) {
+                showToast('กรุณากรอกชื่อ-นามสกุล', 'error');
+                return;
+            }
+            
+            if (email && !isValidEmail(email)) {
+                showToast('รูปแบบอีเมลไม่ถูกต้อง', 'error');
+                return;
+            }
+            
+            // สร้าง FormData
+            const formData = new FormData();
+            formData.append('full_name', fullName);
+            formData.append('email', email);
+            
+            const imageFile = document.getElementById('imageInput').files[0];
+            if (imageFile) {
+                formData.append('profile_image', imageFile);
+            }
+            
+            // ส่งข้อมูล
+            showLoading(true);
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                        // ไม่ต้องกำหนด Content-Type สำหรับ FormData
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // อัพเดทข้อมูลใน localStorage
+                    if (data.user) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        currentUser = data.user;
+                        originalData = {
+                            full_name: data.user.full_name,
+                            email: data.user.email,
+                            profile_image: data.user.profile_image
+                        };
+                    }
+                    
+                    showToast('บันทึกโปรไฟล์สำเร็จ', 'success');
+                    isChanged = false;
+                    document.getElementById('saveBtn').disabled = true;
+                    
+                    // อัพเดทรูปใน header
+                    setTimeout(() => {
+                        if (data.user.profile_image) {
+                            document.getElementById('profileImage').src = data.user.profile_image;
+                        }
+                    }, 500);
+                    
+                } else {
+                    throw new Error(data.error || 'บันทึกไม่สำเร็จ');
+                }
+                
+            } catch (error) {
+                console.error('❌ บันทึกโปรไฟล์ผิดพลาด:', error);
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // ตรวจสอบอีเมล
+        function isValidEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        // กลับไปหน้าเดิม
+        function goBack() {
+            if (isChanged && !confirm('ยกเลิกการเปลี่ยนแปลง?')) {
+                return;
+            }
+            window.history.back();
+        }
+
+        // แสดง Toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            if (!toast || !toastMessage) return;
+            
+            // ตั้งค่าข้อความและประเภท
+            toastMessage.textContent = message;
+            toast.className = 'toast ' + type;
+            
+            // แสดง toast
+            toast.classList.add('show');
+            
+            // ซ่อนหลัง 3 วินาที
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // แสดง/ซ่อน loading
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.classList.toggle('show', show);
+            }
+        }
+
+        // ฟังก์ชันยูทิลิตี้
+        window.onload = function() {
+            console.log('✅ หน้าโปรไฟล์พร้อมใช้งาน');
+        };
+    </script>
+</body>
+</html>

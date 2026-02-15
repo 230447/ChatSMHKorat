@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - โรงพยาบาลเซนต์เมรี่</title>
+    <link rel="stylesheet" href="/assets/css/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <!-- Logo and Header -->
+            <div class="auth-header">
+                <div class="logo">
+                    <i class="fas fa-hospital"></i>
+                    <h1>โรงพยาบาลเซนต์เมรี่</h1>
+                </div>
+                <h2>เข้าสู่ระบบ</h2>
+                <p>กรุณากรอกข้อมูลเพื่อเข้าสู่ระบบสื่อสารภายในโรงพยาบาล</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="username">
+                        <i class="fas fa-user"></i> ชื่อผู้ใช้หรือรหัสพนักงาน
+                    </label>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="กรอกชื่อผู้ใช้หรือรหัสพนักงาน">
+                    <div class="error-message" id="usernameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i> รหัสผ่าน
+                    </label>
+                    <div class="password-input">
+                        <input type="password" id="password" name="password" required 
+                               placeholder="กรอกรหัสผ่าน">
+                        <button type="button" class="toggle-password" id="togglePassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="error-message" id="passwordError"></div>
+                </div>
+
+                <div class="form-options">
+                    <label class="checkbox">
+                        <input type="checkbox" id="rememberMe">
+                        <span>จดจำฉัน</span>
+                    </label>
+                    <a href="/forgot-password" class="forgot-password">
+                        ลืมรหัสผ่าน?
+                    </a>
+                </div>
+
+                <button type="submit" class="btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ
+                </button>
+
+                <div class="auth-footer">
+                    <p>ยังไม่มีบัญชีผู้ใช้? <a href="/register">ลงทะเบียนที่นี่</a></p>
+                    <a href="/" class="back-home">
+                        <i class="fas fa-arrow-left"></i> กลับสู่หน้าหลัก
+                    </a>
+                </div>
+            </form>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <p>กำลังเข้าสู่ระบบ...</p>
+            </div>
+        </div>
+
+        <!-- Hospital Info -->
+        <div class="hospital-info">
+            <div class="info-content">
+                <h3><i class="fas fa-info-circle"></i> เกี่ยวกับระบบ</h3>
+                <ul>
+                    <li><i class="fas fa-check-circle"></i> ระบบสื่อสารภายในโรงพยาบาลแบบเรียลไทม์</li>
+                    <li><i class="fas fa-check-circle"></i> สนับสนุนการสื่อสารข้ามแผนก</li>
+                    <li><i class="fas fa-check-circle"></i> สามารถส่งไฟล์เอกสารและภาพ</li>
+                    <li><i class="fas fa-check-circle"></i> เก็บประวัติการสนทนาครบถ้วน</li>
+                    <li><i class="fas fa-check-circle"></i> ใช้งานได้ทั้งคอมพิวเตอร์และมือถือ</li>
+                </ul>
+                
+                <div class="department-highlight">
+                    <h4><i class="fas fa-users"></i> รองรับ 53 แผนก</h4>
+                    <p>แผนกการแพทย์, การพยาบาล, บริหาร และสนับสนุน</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script>
+        // Password toggle
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+
+        // Form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            // Clear previous errors
+            clearErrors();
+            
+            // Validation
+            if (!username) {
+                showError('usernameError', 'กรุณากรอกชื่อผู้ใช้หรือรหัสพนักงาน');
+                return;
+            }
+            
+            if (!password) {
+                showError('passwordError', 'กรุณากรอกรหัสผ่าน');
+                return;
+            }
+            
+            // Show loading
+            showLoading();
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Save token and user data
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Save remember me
+                    if (rememberMe) {
+                        localStorage.setItem('rememberMe', 'true');
+                    }
+                    
+                    // Redirect to chat
+                    window.location.href = '/chat';
+                } else {
+                    hideLoading();
+                    showError('usernameError', data.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+                }
+            } catch (error) {
+                hideLoading();
+                showError('usernameError', 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+                console.error('Login error:', error);
+            }
+        });
+        
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+        
+        function clearErrors() {
+            document.querySelectorAll('.error-message').forEach(el => {
+                el.textContent = '';
+                el.style.display = 'none';
+            });
+        }
+        
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+        
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                // Verify token
+                fetch('/api/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/chat';
+                    }
+                })
+                .catch(() => {
+                    // Token invalid, clear storage
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                });
+            }
+            
+            // Restore remember me
+            const rememberMe = localStorage.getItem('rememberMe');
+            if (rememberMe === 'true') {
+                document.getElementById('rememberMe').checked = true;
+            }
+        });
+    </script>
+</body>
+</html>
