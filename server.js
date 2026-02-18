@@ -10,6 +10,7 @@ const fs = require('fs');
 const cors = require('cors');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const nodemailer = require('nodemailer');
 
 // ตั้งค่า Google Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -1891,6 +1892,48 @@ app.use((err, req, res, next) => {
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
+// ตั้งค่า transporter ส่งอีเมล
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+// ฟังก์ชันส่งอีเมลรีเซ็ตรหัสผ่าน
+async function sendPasswordResetEmail(email, name, resetLink) {
+    try {
+        const mailOptions = {
+            from: `"ระบบแชท SMH Korat" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: '🔐 ตั้งรหัสผ่านใหม่ - ระบบแชท SMH Korat',
+            html: `
+                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                    <h2 style="color: #667eea; text-align: center;">ตั้งรหัสผ่านใหม่</h2>
+                    <p>สวัสดี คุณ${name}</p>
+                    <p>เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
+                    <p>คลิกปุ่มด้านล่างเพื่อดำเนินการ:</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="${resetLink}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block;">ตั้งรหัสผ่านใหม่</a>
+                    </div>
+                    <p>หรือคัดลอกลิงก์: <br> <span style="color: #667eea;">${resetLink}</span></p>
+                    <p><strong>⚠️ ลิงก์นี้หมดอายุใน 1 ชั่วโมง</strong></p>
+                    <p>หากคุณไม่ได้ขอรับลิงก์ กรุณาละเว้นอีเมลนี้</p>
+                    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+                    <p style="color: #999; font-size: 12px; text-align: center;">© 2024 โรงพยาบาลเซนต์เมรี่ นครราชสีมา</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 ส่งอีเมลไปยัง ${email} สำเร็จ`);
+        return true;
+    } catch (error) {
+        console.error('❌ ส่งอีเมลล้มเหลว:', error);
+        return false;
+    }
+}
 // ================ API: ลืมรหัสผ่าน ================
 app.post('/api/forgot-password', async (req, res) => {
     const { email } = req.body;
@@ -1936,16 +1979,22 @@ app.post('/api/forgot-password', async (req, res) => {
         // สร้างลิงก์รีเซ็ตรหัสผ่าน
         const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
         
-        // ส่งอีเมล (ต้องตั้งค่า nodemailer ก่อน)
-        // await sendPasswordResetEmail(email, user.full_name, resetLink);
+        // ส่งอีเมลจริง
+        const emailSent = await sendPasswordResetEmail(email, user.full_name, resetLink);
         
-        // สำหรับตอนพัฒนา ให้ log ลิงก์ไว้ดู
-        console.log(`🔗 ลิงก์รีเซ็ตรหัสผ่านสำหรับ ${email}: ${resetLink}`);
-
-        res.json({ 
-            success: true, 
-            message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว' 
-        });
+        if (emailSent) {
+            res.json({ 
+                success: true, 
+                message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบอีเมล (รวมถึงโฟลเดอร์ Spam)' 
+            });
+        } else {
+            // ถ้าส่งไม่สำเร็จ ให้ log ไว้ดู
+            console.log(`🔗 ลิงก์สำรองสำหรับ ${email}: ${resetLink}`);
+            res.json({ 
+                success: true, 
+                message: 'ส่งลิงก์ไม่สำเร็จ กรุณาติดต่อผู้ดูแลระบบ' 
+            });
+        }
 
     } catch (error) {
         console.error('Forgot password error:', error);
@@ -1957,6 +2006,7 @@ app.post('/api/forgot-password', async (req, res) => {
         if (client) client.release();
     }
 });
+
 // ================ API: ตรวจสอบความถูกต้องของ token ================
 app.get('/api/validate-reset-token', async (req, res) => {
     const { token } = req.query;
