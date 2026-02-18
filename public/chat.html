@@ -326,28 +326,6 @@
             opacity: 0.7;
         }
 
-        /* Adjust message alignment */
-        .message {
-            max-width: 75%;
-        }
-
-        .message.sent {
-            align-self: flex-end;
-            margin-left: auto;
-            margin-right: 16px;
-        }
-
-        .message.received {
-            align-self: flex-start;
-            margin-right: auto;
-            margin-left: 16px;
-        }
-
-        /* Adjust messages list padding */
-        .messages-list {
-            padding: 16px !important;
-        }
-
 /* AI Summary Styles */
 .ai-summary-section {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -713,6 +691,49 @@
     width: 36px;
     height: 36px;
 }
+/* ข้อความที่เราส่ง (ขวา) - ไม่มีรูป */
+.message.sent {
+    margin-left: auto;
+    margin-right: 16px;
+    max-width: 75%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.message.sent .message-content {
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    color: white;
+    border-bottom-right-radius: 4px;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-left-radius: 16px;
+}
+
+/* ข้อความคนอื่น (ซ้าย) - มีรูป */
+.message.received {
+    margin-left: 16px;
+    margin-right: auto;
+    max-width: 75%;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.message.received .message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.message.received .message-content {
+    background: white;
+    color: #2c3e50;
+    border-bottom-left-radius: 4px;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+}
 }
     </style>
 </head>
@@ -899,9 +920,12 @@
                 </div>
                 <div class="header-right">
                     <div class="chat-actions">
-                        <button id="roomMembersBtn" class="btn-icon" title="สมาชิกในห้อง">
-                            <i class="fas fa-users"></i>
+                         <button id="ttsToggleBtn" class="btn-icon" title="เปิด/ปิดการอ่านข้อความ">
+                            <i class="fas fa-volume-up"></i>
                         </button>
+                        <button id="roomMembersBtn" class="btn-icon" title="สมาชิกในห้อง" style="display: none;">  <!-- ซ่อนไว้ก่อน -->
+                <i class="fas fa-users"></i>
+            </button>
                         <button id="addToRoomBtn" class="btn-icon" title="เพิ่มสมาชิก" style="display: none;">
                             <i class="fas fa-user-plus"></i>
                         </button>
@@ -949,14 +973,22 @@
                         <i class="fas fa-paperclip"></i>
                         <input type="file" id="fileInput" multiple style="display: none;">
                     </button>
-                    <button id="recordVoiceBtn" class="btn-icon" title="บันทึกเสียง">
-                        <i class="fas fa-microphone"></i>
-                    </button>
+
                     <button id="emojiBtn" class="btn-icon" title="อิโมจิ">
                         <i class="fas fa-smile"></i>
                     </button>
                 </div>
-                
+                <div id="filePreviewArea" class="file-preview-area" style="display: none;">
+    <div class="preview-header">
+        <span>ไฟล์ที่เลือก:</span>
+        <button id="clearFilesBtn" class="btn-icon-small" title="ล้างทั้งหมด">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div id="filePreviewList" class="file-preview-list">
+        <!-- รูป preview จะแสดงที่นี่ -->
+    </div>
+</div>
                 <!-- Input Container - ซ่อนตอนยังไม่เลือกห้อง -->
                 <div id="inputContainer" class="input-container" style="display: none;">
                     <textarea id="messageInput" 
@@ -1087,7 +1119,7 @@
         <button class="toast-close">&times;</button>
     </div>
 
-   
+  
     <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="/assets/js/chat.js"></script>
@@ -1314,44 +1346,9 @@
         }
     }
     
-    // ✅ FIX 3: เพิ่มฟังก์ชันเปิด AI Summary โดยตรง (ถ้าต้องการทดสอบ)
-    function testAISummary() {
-        if (window.chatApp && window.chatApp.currentRoom) {
-            window.chatApp.showMockAISummary();
-        } else {
-            alert('กรุณาเลือกห้องสนทนาก่อน');
-        }
-    }
+   
     
-    // ✅ FIX 4: เพิ่มปุ่มทดสอบในหน้า (สำหรับ debug)
-    setTimeout(() => {
-        // สร้างปุ่มทดสอบ AI Summary (เฉพาะ development)
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            const debugBtn = document.createElement('button');
-            debugBtn.innerHTML = '🧠 Test AI';
-            debugBtn.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                left: 20px;
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                cursor: pointer;
-                z-index: 9999;
-                font-size: 12px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            `;
-            debugBtn.onclick = testAISummary;
-            debugBtn.title = 'ทดสอบ AI Summary';
-            document.body.appendChild(debugBtn);
-        }
-    }, 2000);
+   
     // ✅ วิธีแก้ไขง่ายสุด: ใช้ MutationObserver ติดตามการเปลี่ยนชื่อห้อง
 setTimeout(() => {
     const currentRoomName = document.getElementById('currentRoomName');
@@ -1462,44 +1459,7 @@ function addMessageOptimistic(messageData) {
     return tempId;
 }
 
-// ✅ ฟังก์ชันสร้าง message element (ต้องปรับจากใน chat.js)
-function createMessageElement(message) {
-    const isSent = message.sender_id === window.chatApp?.currentUser?.user_id;
-    const messageClass = isSent ? 'message sent' : 'message received';
-    
-    const messageElement = document.createElement('div');
-    messageElement.className = messageClass;
-    messageElement.dataset.messageId = message.message_id;
-    
-    // ใช้ innerHTML แทน DOM manipulation สำหรับประสิทธิภาพ
-    const time = new Date(message.created_at || new Date()).toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    
-    messageElement.innerHTML = `
-        <img src="${message.profile_image || '/assets/images/default-avatar.png'}" 
-             alt="${message.full_name}" class="message-avatar"
-             onerror="this.src='/assets/images/default-avatar.png'">
-        <div class="message-content">
-            ${!isSent ? `<div class="message-sender">${message.full_name}</div>` : ''}
-            <div class="message-text">${escapeHtml(message.message_text)}</div>
-            <div class="message-info">
-                <span class="message-time">${time}</span>
-                ${isSent ? `<span class="message-read"><i class="fas fa-check-double"></i></span>` : ''}
-            </div>
-        </div>
-    `;
-    
-    return messageElement;
-}
 
-// ✅ ฟังก์ชัน escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
 
 // ✅ แก้ไข event listener สำหรับการส่งข้อความ
 document.addEventListener('DOMContentLoaded', function() {
@@ -1536,91 +1496,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // แก้ไข event listener ของปุ่มส่ง
-    const sendBtn = document.getElementById('sendMessageBtn');
-    if (sendBtn) {
-        sendBtn.onclick = handleSendMessage;
-    }
+   const sendBtn = document.getElementById('sendMessageBtn');
+if (sendBtn) {
+    sendBtn.onclick = () => {
+        if (window.chatApp) {
+            window.chatApp.handleSendMessage();
+        }
+    };
+}
 });
-
-// ✅ ฟังก์ชันจัดการการส่งข้อความใหม่
-async function handleSendMessage() {
-    const messageInput = document.getElementById('messageInput');
-    const messageText = messageInput.value.trim();
-    
-    if (!messageText || !window.chatApp?.currentRoom) return;
-    
-    // Optimistic UI: แสดงข้อความทันที
-    const tempId = addMessageOptimistic({
-        message_text: messageText,
-        sender_id: window.chatApp.currentUser.user_id,
-        full_name: window.chatApp.currentUser.full_name,
-        profile_image: window.chatApp.currentUser.profile_image,
-        created_at: new Date().toISOString()
-    });
-    
-    // ล้าง input
-    messageInput.value = '';
-    messageInput.style.height = 'auto';
-    document.getElementById('characterCount').textContent = '0/1000';
-    
-    // ส่งไป server
-    try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`/api/chat-rooms/${window.chatApp.currentRoom.room_id}/messages`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message_text: messageText,
-                message_type: 'text'
-            })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('✅ ส่งข้อความสำเร็จ:', data);
-            
-            // แทนที่ข้อความชั่วคราวด้วยข้อความจริง
-            replaceTempMessage(tempId, data.message || data);
-        } else {
-            // แสดง error และลบข้อความชั่วคราว
-            removeTempMessage(tempId);
-            showErrorNotification('ส่งข้อความล้มเหลว');
-        }
-    } catch (error) {
-        console.error('❌ Send error:', error);
-        removeTempMessage(tempId);
-        showErrorNotification('เชื่อมต่อเซิร์ฟเวอร์ผิดพลาด');
-    }
-}
-
-// ✅ ฟังก์ชันช่วยเหลือ
-function replaceTempMessage(tempId, realMessage) {
-    const tempElement = document.querySelector(`[data-message-id="${tempId}"]`);
-    if (tempElement && window.chatApp?.createMessageElement) {
-        const newElement = window.chatApp.createMessageElement(realMessage);
-        tempElement.parentNode.replaceChild(newElement, tempElement);
-        
-        // Scroll ไปข้อความใหม่
-        const messagesList = document.getElementById('messagesList');
-        if (messagesList) {
-            requestAnimationFrame(() => {
-                scrollToBottom(messagesList);
-            });
-        }
-    }
-}
-
-function removeTempMessage(tempId) {
-    const tempElement = document.querySelector(`[data-message-id="${tempId}"]`);
-    if (tempElement) {
-        tempElement.remove();
-    }
-}
-
 function showErrorNotification(message) {
     const toast = document.getElementById('notificationToast');
     if (!toast) return;
@@ -1638,6 +1522,33 @@ function showErrorNotification(message) {
     }, 3000);
 }
 </script>
-    
+    <!-- Emoji Picker Modal -->
+<div id="emojiPickerModal" class="emoji-modal">
+    <div class="emoji-modal-content">
+        <div class="emoji-header">
+            <h4>เลือกอิโมจิ</h4>
+            <button class="close-emoji-modal">&times;</button>
+        </div>
+        
+        <div class="emoji-search">
+            <input type="text" id="emojiSearch" placeholder="ค้นหาอิโมจิ...">
+        </div>
+        
+        <div class="emoji-categories">
+            <button class="emoji-category-btn active" data-category="smileys" title="หน้ายิ้ม">😀</button>
+            <button class="emoji-category-btn" data-category="gestures" title="ท่าทาง">👋</button>
+            <button class="emoji-category-btn" data-category="animals" title="สัตว์">🐶</button>
+            <button class="emoji-category-btn" data-category="food" title="อาหาร">🍕</button>
+            <button class="emoji-category-btn" data-category="travel" title="ท่องเที่ยว">✈️</button>
+            <button class="emoji-category-btn" data-category="activities" title="กิจกรรม">⚽</button>
+            <button class="emoji-category-btn" data-category="objects" title="สิ่งของ">💡</button>
+            <button class="emoji-category-btn" data-category="symbols" title="สัญลักษณ์">❤️</button>
+        </div>
+        
+        <div id="emojiGrid" class="emoji-grid">
+            <!-- Emojis will be loaded here -->
+        </div>
+    </div>
+</div>
 </body>
 </html>
