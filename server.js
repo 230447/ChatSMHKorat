@@ -38,26 +38,33 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
         rejectUnauthorized: false // จำเป็นสำหรับ Supabase
-    }
+    },
+    connectionTimeoutMillis: 10000, // รอเชื่อมต่อ 10 วินาที
+    idleTimeoutMillis: 30000, // ปิด connection ที่ไม่ใช้แล้ว
+    max: 20 // จำนวน connection สูงสุด
 });
 
-// ทดสอบการเชื่อมต่อ
+// ทดสอบการเชื่อมต่อ (ไม่จำเป็น เพราะ startServer จะทำ)
 pool.connect((err, client, release) => {
     if (err) {
         console.error('❌ Database connection failed:', err.message);
-        console.log('💡 Solution:');
-        console.log('1. Check DATABASE_URL in environment variables');
-        console.log('2. Make sure Supabase project is active');
-        console.log('3. Check if password is correct');
     } else {
         console.log('✅ Database connected to Supabase successfully!');
         release();
     }
 });
 
-// Helper function to get database connection
-const getConnection = async () => {
-    return await pool.connect();
+// Helper function to get database connection with retry
+const getConnection = async (retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            return await pool.connect();
+        } catch (error) {
+            console.log(`⚠️ Connection attempt ${i + 1} failed, retrying...`);
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
 };
 
 // ========================================
@@ -146,8 +153,7 @@ async function createDepartmentRooms() {
     }
 }
 
-// เรียกใช้ฟังก์ชันเมื่อ server start
-createDepartmentRooms();
+
 // ฟังก์ชันสร้างสรุปสำรองเมื่อ AI ไม่ทำงาน
 function createFallbackSummary(messages, roomName) {
     const uniqueUsers = [...new Set(messages.map(m => m.full_name))];
@@ -189,7 +195,6 @@ async function createSummaryTable() {
         if (client) client.release();
     }
 }
-createSummaryTable();
 
 // ========================================
 // File upload configuration
@@ -2129,12 +2134,43 @@ app.post('/api/reset-password', async (req, res) => {
     }
 });
 // ========================================
-// Start server
+// Start server with database check
 // ========================================
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📁 Database: PostgreSQL on Supabase`);
-    console.log(`🌐 Access: http://localhost:${PORT}`);
-    console.log(`🗣️  Language: Thai (UTF-8)`);
-});
+async function startServer() {
+    try {
+        // ทดสอบ database connection ก่อน
+        console.log('🔄 Testing database connection...');
+        const testClient = await pool.connect();
+        console.log('✅ Database connection successful');
+        testClient.release();
+
+        // ค่อยสร้างตาราง summary (ไม่จำเป็นต้องรอ)
+        createSummaryTable().catch(err => {
+            console.warn('⚠️ Summary table creation skipped:', err.message);
+        });
+
+        // ค่อยสร้างห้องแผนก (ไม่จำเป็นต้องรอ)
+        createDepartmentRooms().catch(err => {
+            console.warn('⚠️ Department rooms creation skipped:', err.message);
+        });
+
+        // start server
+        const PORT = process.env.PORT || 3000;
+        server.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+            console.log(`📁 Database: PostgreSQL on Supabase`);
+            console.log(`🌐 Access: http://localhost:${PORT}`);
+            console.log(`🗣️  Language: Thai (UTF-8)`);
+        });
+
+    } catch (error) {
+        console.error('❌ Cannot start server:', error.message);
+        console.log('💡 Will retry in 5 seconds...');
+        
+        // ลองใหม่หลังจาก 5 วินาที
+        setTimeout(startServer, 5000);
+    }
+}
+
+// เริ่มต้น server
+startServer();
