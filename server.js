@@ -1892,12 +1892,18 @@ app.use((err, req, res, next) => {
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
-// ตั้งค่า transporter ส่งอีเมล
+
+// ================ ตั้งค่าระบบส่งอีเมล ================
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false
     }
 });
 
@@ -1934,6 +1940,7 @@ async function sendPasswordResetEmail(email, name, resetLink) {
         return false;
     }
 }
+
 // ================ API: ลืมรหัสผ่าน ================
 app.post('/api/forgot-password', async (req, res) => {
     const { email } = req.body;
@@ -2006,7 +2013,6 @@ app.post('/api/forgot-password', async (req, res) => {
         if (client) client.release();
     }
 });
-
 // ================ API: ตรวจสอบความถูกต้องของ token ================
 app.get('/api/validate-reset-token', async (req, res) => {
     const { token } = req.query;
