@@ -147,7 +147,22 @@ async function createDepartmentRooms() {
 
 // เรียกใช้ฟังก์ชันเมื่อ server start
 createDepartmentRooms();
-
+// ฟังก์ชันสร้างสรุปสำรองเมื่อ AI ไม่ทำงาน
+function createFallbackSummary(messages, roomName) {
+    const uniqueUsers = [...new Set(messages.map(m => m.full_name))];
+    const timeRange = messages.length > 0 
+        ? `${messages[0].date} - ${messages[messages.length-1].date}`
+        : 'ไม่ระบุ';
+    
+    return `📊 **สรุปการสนทนาห้อง ${roomName}**\n\n` +
+           `📅 ช่วงเวลา: ${timeRange}\n` +
+           `👥 ผู้เข้าร่วม: ${uniqueUsers.length} คน\n` +
+           `💬 จำนวนข้อความ: ${messages.length} ข้อความ\n\n` +
+           `**ข้อความตัวอย่าง:**\n` +
+           messages.slice(0, 5).map(m => 
+               `- ${m.date} ${m.time} ${m.full_name}: ${m.message_text.substring(0, 50)}...`
+           ).join('\n');
+}
 // ========================================
 // ฟังก์ชันสร้างตาราง summary (ปรับเป็น PostgreSQL)
 // ========================================
@@ -1084,91 +1099,6 @@ app.post('/api/change-password', authenticateToken, async (req, res) => {
     }
 });
 
-// 12. Forgot password request
-app.post('/api/forgot-password', async (req, res) => {
-    const client = await getConnection();
-    try {
-        const { employee_id, email } = req.body;
-
-        if (!employee_id || !email) {
-            return res.status(400).json({ error: 'กรุณากรอกรหัสพนักงานและอีเมล' });
-        }
-
-        const usersResult = await client.query(
-            'SELECT * FROM users WHERE employee_id = $1 AND email = $2',
-            [employee_id, email]
-        );
-
-        if (usersResult.rows.length === 0) {
-            return res.status(404).json({ error: 'ไม่พบผู้ใช้ที่ตรงกับข้อมูล' });
-        }
-
-        const user = usersResult.rows[0];
-
-        const resetToken = jwt.sign(
-            { 
-                user_id: user.user_id, 
-                type: 'password_reset',
-                employee_id: user.employee_id 
-            },
-            JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        console.log(`Reset token for ${user.email}: ${resetToken}`);
-
-        res.json({
-            success: true,
-            message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว',
-            reset_token: resetToken
-        });
-
-    } catch (error) {
-        console.error('Forgot password error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
-    } finally {
-        if (client) client.release();
-    }
-});
-
-// 13. Reset password
-app.post('/api/reset-password', async (req, res) => {
-    const client = await getConnection();
-    try {
-        const { token, new_password } = req.body;
-
-        if (!token || !new_password) {
-            return res.status(400).json({ error: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
-        }
-
-        let decoded;
-        try {
-            decoded = jwt.verify(token, JWT_SECRET);
-        } catch (err) {
-            return res.status(401).json({ error: 'Token ไม่ถูกต้องหรือหมดอายุ' });
-        }
-
-        if (decoded.type !== 'password_reset') {
-            return res.status(401).json({ error: 'Token ไม่ถูกต้อง' });
-        }
-
-        const hashedPassword = await bcrypt.hash(new_password, 10);
-
-        await client.query(
-            'UPDATE users SET password = $1, updated_at = NOW() WHERE user_id = $2',
-            [hashedPassword, decoded.user_id]
-        );
-
-        res.json({ success: true, message: 'รีเซ็ตรหัสผ่านสำเร็จ' });
-
-    } catch (error) {
-        console.error('Reset password error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน' });
-    } finally {
-        if (client) client.release();
-    }
-});
-
 // 14. Get room members
 app.get('/api/chat-rooms/:roomId/members', authenticateToken, async (req, res) => {
     const client = await getConnection();
@@ -1961,7 +1891,187 @@ app.use((err, req, res, next) => {
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
+// ================ API: ลืมรหัสผ่าน ================
+app.post('/api/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    
+    if (!email) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'กรุณากรอกอีเมล' 
+        });
+    }
 
+    let client;
+    try {
+        client = await pool.connect();
+        
+        // ตรวจสอบว่ามีผู้ใช้นี้ในระบบหรือไม่
+        const userResult = await client.query(
+            'SELECT user_id, username, full_name FROM users WHERE email = $1',
+            [email]
+        );
+
+        if (userResult.rows.length === 0) {
+            // เพื่อความปลอดภัย: ไม่บอกว่ามีอีเมลนี้หรือไม่
+            return res.json({ 
+                success: true, 
+                message: 'หากอีเมลนี้มีในระบบ เราจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ' 
+            });
+        }
+
+        const user = userResult.rows[0];
+        
+        // สร้าง token สำหรับรีเซ็ตรหัสผ่าน (ใช้งานได้ 1 ชั่วโมง)
+        const resetToken = require('crypto').randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 3600000); // 1 ชั่วโมง
+        
+        // บันทึก token ลงในฐานข้อมูล
+        await client.query(
+            `INSERT INTO password_resets (user_id, token, expires_at) 
+             VALUES ($1, $2, $3)`,
+            [user.user_id, resetToken, expiresAt]
+        );
+
+        // สร้างลิงก์รีเซ็ตรหัสผ่าน
+        const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+        
+        // ส่งอีเมล (ต้องตั้งค่า nodemailer ก่อน)
+        // await sendPasswordResetEmail(email, user.full_name, resetLink);
+        
+        // สำหรับตอนพัฒนา ให้ log ลิงก์ไว้ดู
+        console.log(`🔗 ลิงก์รีเซ็ตรหัสผ่านสำหรับ ${email}: ${resetLink}`);
+
+        res.json({ 
+            success: true, 
+            message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว' 
+        });
+
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' 
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
+// ================ API: ตรวจสอบความถูกต้องของ token ================
+app.get('/api/validate-reset-token', async (req, res) => {
+    const { token } = req.query;
+    
+    if (!token) {
+        return res.json({ valid: false });
+    }
+
+    let client;
+    try {
+        client = await pool.connect();
+        
+        // ตรวจสอบ token ว่ามีในระบบและยังไม่หมดอายุ
+        const result = await client.query(
+            `SELECT * FROM password_resets 
+             WHERE token = $1 
+             AND expires_at > NOW() 
+             AND used = FALSE`,
+            [token]
+        );
+
+        res.json({ valid: result.rows.length > 0 });
+    } catch (error) {
+        console.error('Validate token error:', error);
+        res.json({ valid: false });
+    } finally {
+        if (client) client.release();
+    }
+});
+// ================ API: ตั้งรหัสผ่านใหม่ ================
+app.post('/api/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+    
+    if (!token || !password) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+        });
+    }
+
+    if (password.length < 6) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' 
+        });
+    }
+
+    let client;
+    try {
+        client = await pool.connect();
+        
+        // เริ่ม transaction
+        await client.query('BEGIN');
+        
+        // ตรวจสอบ token
+        const tokenResult = await client.query(
+            `SELECT * FROM password_resets 
+             WHERE token = $1 
+             AND expires_at > NOW() 
+             AND used = FALSE`,
+            [token]
+        );
+
+        if (tokenResult.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว' 
+            });
+        }
+
+        const resetRequest = tokenResult.rows[0];
+        
+        // เข้ารหัสรหัสผ่าน (ใช้ bcrypt ที่มีอยู่แล้ว)
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds); // <<< แก้ตรงนี้
+        
+        // อัพเดทรหัสผ่านในตาราง users
+        await client.query(
+            `UPDATE users SET password = $1 WHERE user_id = $2`,
+            [hashedPassword, resetRequest.user_id]
+        );
+        
+        // ทำเครื่องหมายว่าใช้ token แล้ว
+        await client.query(
+            `UPDATE password_resets SET used = TRUE WHERE token = $1`,
+            [token]
+        );
+        
+        // ลบ token เก่าอื่นๆ ของ user นี้ (optional)
+        await client.query(
+            `UPDATE password_resets SET used = TRUE 
+             WHERE user_id = $1 AND used = FALSE`,
+            [resetRequest.user_id]
+        );
+        
+        // ยืนยัน transaction
+        await client.query('COMMIT');
+        
+        res.json({ 
+            success: true, 
+            message: 'เปลี่ยนรหัสผ่านสำเร็จ' 
+        });
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Reset password error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' 
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
 // ========================================
 // Start server
 // ========================================
