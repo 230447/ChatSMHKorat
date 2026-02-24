@@ -10,7 +10,7 @@ const fs = require('fs');
 const cors = require('cors');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const nodemailer = require('nodemailer');
+
 
 // ตั้งค่า Google Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -1912,39 +1912,7 @@ app.use((err, req, res, next) => {
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ฟังก์ชันส่งอีเมลรีเซ็ตรหัสผ่าน
-async function sendPasswordResetEmail(email, name, resetLink) {
-    try {
-        const mailOptions = {
-            from: `"ระบบแชท SMH Korat" <${process.env.EMAIL_USER}>`,
-            to: email,
-            subject: '🔐 ตั้งรหัสผ่านใหม่ - ระบบแชท SMH Korat',
-            html: `
-                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-                    <h2 style="color: #667eea; text-align: center;">ตั้งรหัสผ่านใหม่</h2>
-                    <p>สวัสดี คุณ${name}</p>
-                    <p>เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
-                    <p>คลิกปุ่มด้านล่างเพื่อดำเนินการ:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${resetLink}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block;">ตั้งรหัสผ่านใหม่</a>
-                    </div>
-                    <p>หรือคัดลอกลิงก์: <br> <span style="color: #667eea;">${resetLink}</span></p>
-                    <p><strong>⚠️ ลิงก์นี้หมดอายุใน 1 ชั่วโมง</strong></p>
-                    <p>หากคุณไม่ได้ขอรับลิงก์ กรุณาละเว้นอีเมลนี้</p>
-                    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
-                    <p style="color: #999; font-size: 12px; text-align: center;">© 2024 โรงพยาบาลเซนต์เมรี่ นครราชสีมา</p>
-                </div>
-            `
-        };
 
-        await transporter.sendMail(mailOptions);
-        console.log(`📧 ส่งอีเมลไปยัง ${email} สำเร็จ`);
-        return true;
-    } catch (error) {
-        console.error('❌ ส่งอีเมลล้มเหลว:', error);
-        return false;
-    }
-}
 
 // ================ API: ลืมรหัสผ่าน (ส่งรหัส 6 หลัก) ================
 app.post('/api/forgot-password', async (req, res) => {
@@ -2269,92 +2237,7 @@ app.get('/api/validate-reset-token', async (req, res) => {
         if (client) client.release();
     }
 });
-// ================ API: ตั้งรหัสผ่านใหม่ ================
-app.post('/api/reset-password', async (req, res) => {
-    const { token, password } = req.body;
-    
-    if (!token || !password) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
-        });
-    }
 
-    if (password.length < 6) {
-        return res.status(400).json({ 
-            success: false, 
-            message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' 
-        });
-    }
-
-    let client;
-    try {
-        client = await pool.connect();
-        
-        // เริ่ม transaction
-        await client.query('BEGIN');
-        
-        // ตรวจสอบ token
-        const tokenResult = await client.query(
-            `SELECT * FROM password_resets 
-             WHERE token = $1 
-             AND expires_at > NOW() 
-             AND used = FALSE`,
-            [token]
-        );
-
-        if (tokenResult.rows.length === 0) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ 
-                success: false, 
-                message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว' 
-            });
-        }
-
-        const resetRequest = tokenResult.rows[0];
-        
-        // เข้ารหัสรหัสผ่าน (ใช้ bcrypt ที่มีอยู่แล้ว)
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds); // <<< แก้ตรงนี้
-        
-        // อัพเดทรหัสผ่านในตาราง users
-        await client.query(
-            `UPDATE users SET password = $1 WHERE user_id = $2`,
-            [hashedPassword, resetRequest.user_id]
-        );
-        
-        // ทำเครื่องหมายว่าใช้ token แล้ว
-        await client.query(
-            `UPDATE password_resets SET used = TRUE WHERE token = $1`,
-            [token]
-        );
-        
-        // ลบ token เก่าอื่นๆ ของ user นี้ (optional)
-        await client.query(
-            `UPDATE password_resets SET used = TRUE 
-             WHERE user_id = $1 AND used = FALSE`,
-            [resetRequest.user_id]
-        );
-        
-        // ยืนยัน transaction
-        await client.query('COMMIT');
-        
-        res.json({ 
-            success: true, 
-            message: 'เปลี่ยนรหัสผ่านสำเร็จ' 
-        });
-
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('Reset password error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' 
-        });
-    } finally {
-        if (client) client.release();
-    }
-});
 // ========================================
 // Start server with database check
 // ========================================
