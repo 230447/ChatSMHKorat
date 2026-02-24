@@ -1956,7 +1956,7 @@ async function sendPasswordResetEmail(email, name, resetLink) {
     }
 }
 
-// ================ API: ลืมรหัสผ่าน ================
+// ================ API: ลืมรหัสผ่าน (ส่งรหัส 6 หลัก) ================
 app.post('/api/forgot-password', async (req, res) => {
     const { email } = req.body;
     
@@ -1981,45 +1981,244 @@ app.post('/api/forgot-password', async (req, res) => {
             // เพื่อความปลอดภัย: ไม่บอกว่ามีอีเมลนี้หรือไม่
             return res.json({ 
                 success: true, 
-                message: 'หากอีเมลนี้มีในระบบ เราจะส่งลิงก์รีเซ็ตรหัสผ่านให้คุณ' 
+                message: 'หากอีเมลนี้มีในระบบ เราจะส่งรหัส 6 หลักให้คุณ' 
             });
         }
 
         const user = userResult.rows[0];
         
-        // สร้าง token สำหรับรีเซ็ตรหัสผ่าน (ใช้งานได้ 1 ชั่วโมง)
-        const resetToken = require('crypto').randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 3600000); // 1 ชั่วโมง
+        // ✅ สร้างรหัส 6 หลัก
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
         
-        // บันทึก token ลงในฐานข้อมูล
+        // ✅ กำหนดอายุ 10 นาที
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        
+        // ✅ ลบรหัสเก่าของ user นี้ (ถ้ามี)
+        await client.query(
+            'DELETE FROM password_resets WHERE user_id = $1 AND used = FALSE',
+            [user.user_id]
+        );
+        
+        // ✅ บันทึกรหัสใหม่ลงฐานข้อมูล
         await client.query(
             `INSERT INTO password_resets (user_id, token, expires_at) 
              VALUES ($1, $2, $3)`,
-            [user.user_id, resetToken, expiresAt]
+            [user.user_id, resetCode, expiresAt]
         );
 
-        // สร้างลิงก์รีเซ็ตรหัสผ่าน
-        const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
-        
-        // ส่งอีเมลจริง
-        const emailSent = await sendPasswordResetEmail(email, user.full_name, resetLink);
+        // ✅ ส่งอีเมลพร้อมรหัส 6 หลัก
+        const emailSent = await sendResetCodeEmail(email, user.full_name, resetCode);
         
         if (emailSent) {
             res.json({ 
                 success: true, 
-                message: 'ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบอีเมล (รวมถึงโฟลเดอร์ Spam)' 
+                message: 'ส่งรหัส 6 หลักไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบอีเมล',
+                expires_in: 10
             });
         } else {
-            // ถ้าส่งไม่สำเร็จ ให้ log ไว้ดู
-            console.log(`🔗 ลิงก์สำรองสำหรับ ${email}: ${resetLink}`);
+            console.log(`🔑 รหัสสำรองสำหรับ ${email}: ${resetCode} (อายุ 10 นาที)`);
             res.json({ 
                 success: true, 
-                message: 'ส่งลิงก์ไม่สำเร็จ กรุณาติดต่อผู้ดูแลระบบ' 
+                message: 'ส่งอีเมลไม่สำเร็จ แต่คุณสามารถใช้รหัสนี้ได้: ' + resetCode,
+                debug_code: resetCode
             });
         }
 
     } catch (error) {
         console.error('Forgot password error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' 
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// ✅ เพิ่มฟังก์ชันส่งอีเมลรหัส 6 หลัก (วางต่อจากฟังก์ชันเดิม)
+async function sendResetCodeEmail(email, name, code) {
+    try {
+        const mailOptions = {
+            from: `"ระบบแชท SMH Korat" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: '🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่',
+            html: `
+                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #667eea; text-align: center;">🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่</h2>
+                    <p>สวัสดี คุณ${name}</p>
+                    <p>เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
+                    <p>กรุณาใช้รหัส 6 หลักด้านล่างเพื่อดำเนินการ:</p>
+                    <div style="text-align: center; margin: 40px 0;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 48px; font-weight: bold; letter-spacing: 10px; padding: 20px; border-radius: 10px; display: inline-block;">
+                            ${code}
+                        </div>
+                    </div>
+                    <p style="color: #e74c3c;">⚠️ รหัสนี้หมดอายุใน 10 นาที</p>
+                    <p>หากคุณไม่ได้ขอรับรหัสนี้ กรุณาละเว้นอีเมลนี้</p>
+                </div>
+            `
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 ส่งรหัส 6 หลักไปยัง ${email} สำเร็จ`);
+        return true;
+    } catch (error) {
+        console.error('❌ ส่งอีเมลล้มเหลว:', error);
+        return false;
+    }
+}
+
+// ✅ API: ตรวจสอบรหัส 6 หลัก
+app.post('/api/verify-reset-code', async (req, res) => {
+    const { email, code } = req.body;
+    
+    if (!email || !code) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'กรุณากรอกอีเมลและรหัสยืนยัน' 
+        });
+    }
+
+    let client;
+    try {
+        client = await pool.connect();
+        
+        // ตรวจสอบว่ามีผู้ใช้นี้หรือไม่
+        const userResult = await client.query(
+            'SELECT user_id FROM users WHERE email = $1',
+            [email]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'ไม่พบผู้ใช้นี้ในระบบ' 
+            });
+        }
+
+        const userId = userResult.rows[0].user_id;
+        
+        // ตรวจสอบรหัส
+        const codeResult = await client.query(
+            `SELECT * FROM password_resets 
+             WHERE user_id = $1 
+             AND token = $2 
+             AND expires_at > NOW() 
+             AND used = FALSE`,
+            [userId, code]
+        );
+
+        if (codeResult.rows.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว' 
+            });
+        }
+
+        // สร้าง temporary token สำหรับตั้งรหัสผ่านใหม่ (อายุ 15 นาที)
+        const tempToken = jwt.sign(
+            { 
+                user_id: userId,
+                purpose: 'password_reset',
+                email: email
+            },
+            JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'รหัสถูกต้อง',
+            temp_token: tempToken
+        });
+
+    } catch (error) {
+        console.error('Verify code error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' 
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// ✅ API: ตั้งรหัสผ่านใหม่ (ใช้ temp token)
+app.post('/api/reset-password-with-code', async (req, res) => {
+    const { temp_token, password } = req.body;
+    
+    if (!temp_token || !password) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+        });
+    }
+
+    if (password.length < 6) {
+        return res.status(400).json({ 
+            success: false, 
+            message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' 
+        });
+    }
+
+    let client;
+    try {
+        // ตรวจสอบ temp token
+        const decoded = jwt.verify(temp_token, JWT_SECRET);
+        
+        if (decoded.purpose !== 'password_reset') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Token ไม่ถูกต้อง' 
+            });
+        }
+
+        client = await pool.connect();
+        
+        // เริ่ม transaction
+        await client.query('BEGIN');
+        
+        // เข้ารหัสรหัสผ่านใหม่
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // อัพเดทรหัสผ่าน
+        await client.query(
+            `UPDATE users SET password = $1 WHERE user_id = $2`,
+            [hashedPassword, decoded.user_id]
+        );
+        
+        // ลบรหัสเก่าทั้งหมดของผู้ใช้นี้
+        await client.query(
+            `UPDATE password_resets SET used = TRUE 
+             WHERE user_id = $1 AND used = FALSE`,
+            [decoded.user_id]
+        );
+        
+        await client.query('COMMIT');
+        
+        res.json({ 
+            success: true, 
+            message: 'เปลี่ยนรหัสผ่านสำเร็จ' 
+        });
+
+    } catch (error) {
+        if (client) await client.query('ROLLBACK');
+        
+        if (error.name === 'TokenExpiredError') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'หมดเวลาดำเนินการ กรุณาขอรหัสใหม่' 
+            });
+        }
+        
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'ข้อมูลไม่ถูกต้อง กรุณาลองใหม่' 
+            });
+        }
+        
+        console.error('Reset password error:', error);
         res.status(500).json({ 
             success: false, 
             message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' 
