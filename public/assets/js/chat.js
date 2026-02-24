@@ -4062,43 +4062,135 @@ searchStyles.textContent = `
 document.head.appendChild(searchStyles);
     }
 
-  async openCreateRoomModal() {
-    console.log('🚀 Opening create room modal...');
-    
-    // ✅ รีเซ็ตค่าทั้งหมด
-    this.selectedMemberIds.clear();
-    
-    const roomNameInput = document.getElementById('roomNameInput');
-    const memberSearch = document.getElementById('memberSearch');
-    const roomNameCount = document.getElementById('roomNameCount');
-    
+ async openCreateRoomModal() {
+    console.log('🚀 เปิด Modal สร้างห้อง...');
+
+    // ---- รีเซ็ตค่าทั้งหมดก่อนเปิดใหม่ทุกครั้ง ----
+    this.selectedMemberIds.clear(); // ล้างรายชื่อที่เคยเลือกไว้
+
+    const roomNameInput  = document.getElementById('roomNameInput');
+    const memberSearch   = document.getElementById('memberSearch');
+    const roomNameCount  = document.getElementById('roomNameCount');
+
     if (roomNameInput) {
-        roomNameInput.value = '';
-        if (roomNameCount) roomNameCount.textContent = '0';
+        roomNameInput.value = '';                           // ล้างชื่อห้อง
+        if (roomNameCount) roomNameCount.textContent = '0'; // รีเซ็ตตัวนับ
     }
-    
-    if (memberSearch) memberSearch.value = '';
-    
-    // ✅ เลือกประเภทห้องเป็น group
+    if (memberSearch) memberSearch.value = ''; // ล้างช่องค้นหา
+
+    // ---- เลือกประเภทห้องเป็น "กลุ่ม" เป็นค่าเริ่มต้น ----
     const groupRadio = document.querySelector('input[name="roomType"][value="group"]');
     if (groupRadio) groupRadio.checked = true;
-    
-    // ✅ โหลดรายชื่อสมาชิก
-    console.log('📥 Loading all users...');
-    await this.loadAllUsers();
-    
-    // ✅ แสดง modal
+
+    // ---- แสดง Modal ก่อน (สำคัญ!) ----
+    // ต้องแสดง Modal ก่อนที่จะโหลดข้อมูล
+    // เพราะถ้าโหลดข้อมูลก่อน element #membersList ยังไม่มีใน DOM
+    // จะทำให้ไม่สามารถใส่ข้อมูลลงไปได้
     const modal = document.getElementById('createRoomModal');
-    if (modal) {
-        modal.classList.add('active');
-        console.log('✅ Modal opened');
-        
-        // ✅ Focus ช่องพิมพ์ชื่อห้อง
-        setTimeout(() => {
-            if (roomNameInput) roomNameInput.focus();
-        }, 300);
-    } else {
-        console.error('❌ Modal element not found!');
+    if (!modal) {
+        console.error('❌ ไม่พบ element createRoomModal ใน HTML');
+        return;
+    }
+    modal.classList.add('active'); // แสดง Modal
+    console.log('✅ Modal เปิดแล้ว');
+
+    // โฟกัสที่ช่องพิมพ์ชื่อห้องหลังจาก animation เสร็จ
+    setTimeout(() => {
+        if (roomNameInput) roomNameInput.focus();
+    }, 300);
+
+    // ---- โหลดรายชื่อสมาชิกเข้า Modal ----
+    // ใช้ loadUsersForModal() แทน loadAllUsers()
+    // เพราะ loadAllUsers() แสดงผลใน Sidebar ไม่ใช่ใน Modal
+    await this.loadUsersForModal();
+}
+async loadUsersForModal() {
+    console.log('📥 loadUsersForModal: กำลังโหลดรายชื่อสมาชิกเข้า Modal...');
+
+    // ดึง element #membersList ซึ่งอยู่ใน Modal สร้างห้อง
+    const membersList = document.getElementById('membersList');
+    if (!membersList) {
+        console.error('❌ ไม่พบ element #membersList ใน Modal');
+        return;
+    }
+
+    // แสดง Loading spinner ขณะรอโหลดข้อมูล
+    membersList.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: #7f8c8d;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 12px; display: block;"></i>
+            <p style="margin: 0; font-size: 14px;">กำลังโหลดรายชื่อสมาชิก...</p>
+        </div>
+    `;
+
+    try {
+        // ดึง Token จาก localStorage เพื่อยืนยันตัวตน
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('ไม่พบ Token กรุณาเข้าสู่ระบบใหม่');
+        }
+
+        console.log('📡 กำลังเรียก API /api/users...');
+
+        // เรียก API เพื่อดึงรายชื่อผู้ใช้ทั้งหมด
+        const response = await fetch('/api/users', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        // ตรวจสอบว่า API ตอบกลับสำเร็จหรือไม่
+        if (!response.ok) {
+            throw new Error(`API ตอบกลับ Error: ${response.status} ${response.statusText}`);
+        }
+
+        // แปลงข้อมูลจาก JSON
+        const data = await response.json();
+
+        // เก็บรายชื่อผู้ใช้ทั้งหมดใน this.allUsers
+        // เพื่อให้ฟังก์ชันอื่นๆ (เช่น renderMembersList, toggleMemberSelection) ใช้งานได้
+        this.allUsers = data.users || [];
+
+        console.log(`✅ โหลดสำเร็จ: พบผู้ใช้ ${this.allUsers.length} คน`);
+
+        // ถ้าไม่มีผู้ใช้เลย
+        if (this.allUsers.length === 0) {
+            membersList.innerHTML = `
+                <div class="empty-state" style="text-align: center; padding: 30px; color: #95a5a6;">
+                    <i class="fas fa-users" style="font-size: 36px; margin-bottom: 12px; display: block; color: #bdc3c7;"></i>
+                    <p style="margin: 0 0 8px; font-weight: 600;">ไม่พบผู้ใช้งาน</p>
+                    <small>ยังไม่มีผู้ใช้งานในระบบ</small>
+                </div>
+            `;
+            return;
+        }
+
+        // แสดงรายชื่อผู้ใช้ใน Modal โดยเรียก renderMembersList()
+        // ส่ง '' (ค่าว่าง) เพราะยังไม่ได้พิมพ์ค้นหาอะไร
+        this.renderMembersList('');
+
+    } catch (error) {
+        // กรณีเกิดข้อผิดพลาด แสดงข้อความ Error และปุ่มลองใหม่
+        console.error('❌ loadUsersForModal Error:', error.message);
+
+        membersList.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: #e74c3c;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 36px; margin-bottom: 12px; display: block;"></i>
+                <p style="margin: 0 0 8px; font-weight: 600;">โหลดรายชื่อไม่สำเร็จ</p>
+                <small style="color: #c0392b; display: block; margin-bottom: 16px;">
+                    ${error.message}
+                </small>
+                <button
+                    onclick="window.chatApp.loadUsersForModal()"
+                    style="padding: 8px 20px; background: #3498db; color: white;
+                           border: none; border-radius: 6px; cursor: pointer;
+                           font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-redo"></i> ลองใหม่
+                </button>
+            </div>
+        `;
+
+        this.showNotification('โหลดข้อมูลล้มเหลว', error.message, 'error');
     }
 }
    
@@ -4217,65 +4309,91 @@ renderRoomMembersModal(members) {
     modal.classList.add('active');
 }
 
-    renderMembersList(searchQuery = '') {
-        const membersList = document.getElementById('membersList');
-        if (!membersList) return;
-        
-        if (!this.allUsers.length) {
-            membersList.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-slash"></i>
-                    <p>ไม่พบรายชื่อสมาชิก</p>
-                </div>
-            `;
-            return;
-        }
-        
-        const filteredUsers = this.allUsers.filter(user => {
-            const query = searchQuery.toLowerCase();
-            return user.full_name.toLowerCase().includes(query) ||
-                   user.email.toLowerCase().includes(query);
-        });
-        
-        let membersHTML = '';
-        filteredUsers.forEach(user => {
-            const isSelected = this.selectedMemberIds.has(user.user_id);
-            membersHTML += `
-                <div class="member-item ${isSelected ? 'selected' : ''}" 
-                     data-user-id="${user.user_id}">
-                    <div class="member-avatar">
-                        ${user.profile_image ? 
-                            `<img src="${user.profile_image}" alt="${user.full_name}">` : 
-                            `<i class="fas fa-user"></i>`
-                        }
-                    </div>
-                    <div class="member-info">
-                        <div class="member-name">${user.full_name}</div>
-                        <div class="member-email">${user.email || 'ไม่มีอีเมล'}</div>
-                    </div>
-                    <div class="member-checkbox">
-                        ${isSelected ? '<i class="fas fa-check"></i>' : ''}
-                    </div>
-                </div>
-            `;
-        });
-        
-        membersList.innerHTML = membersHTML || `
-            <div class="empty-state">
-                <i class="fas fa-search"></i>
+  renderMembersList(searchQuery = '') {
+    const membersList = document.getElementById('membersList');
+    if (!membersList) return;
+
+    if (!this.allUsers || this.allUsers.length === 0) {
+        membersList.innerHTML = `
+            <div style="text-align:center; padding:30px; color:#95a5a6;">
+                <i class="fas fa-user-slash" style="font-size:36px; display:block; margin-bottom:10px;"></i>
+                <p>ไม่พบรายชื่อสมาชิก</p>
+            </div>
+        `;
+        return;
+    }
+
+    // กรองตาม searchQuery
+    const filteredUsers = this.allUsers.filter(user => {
+        if (!searchQuery || searchQuery.trim() === '') return true;
+        const q = searchQuery.toLowerCase().trim();
+        return (
+            (user.full_name       || '').toLowerCase().includes(q) ||
+            (user.email           || '').toLowerCase().includes(q) ||  // ✅ ป้องกัน null
+            (user.employee_id     || '').toLowerCase().includes(q) ||
+            (user.department_name || '').toLowerCase().includes(q)
+        );
+    });
+
+    if (filteredUsers.length === 0) {
+        membersList.innerHTML = `
+            <div style="text-align:center; padding:30px; color:#95a5a6;">
+                <i class="fas fa-search" style="font-size:36px; display:block; margin-bottom:10px;"></i>
                 <p>ไม่พบสมาชิกที่ค้นหา</p>
             </div>
         `;
-        
         this.renderSelectedMembers();
-        
-        membersList.querySelectorAll('.member-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const userId = parseInt(item.dataset.userId);
-                this.toggleMemberSelection(userId);
-            });
-        });
+        return;
     }
+
+    let membersHTML = '';
+    filteredUsers.forEach(user => {
+        const isSelected = this.selectedMemberIds.has(user.user_id);
+        const isOnline   = user.is_online === 1 || user.is_online === true;
+        const initial    = user.full_name ? user.full_name.charAt(0).toUpperCase() : '?';
+
+        membersHTML += `
+            <div class="member-item ${isSelected ? 'selected' : ''}"
+                 data-user-id="${user.user_id}">
+
+                <div class="member-avatar" style="position:relative; flex-shrink:0;">
+                    ${user.profile_image
+                        ? `<img src="${user.profile_image}" alt="${user.full_name}"
+                                onerror="this.style.display='none';">`
+                        : `<div style="width:40px;height:40px;border-radius:50%;background:#3498db;
+                                       color:white;display:flex;align-items:center;justify-content:center;
+                                       font-weight:bold;">${initial}</div>`
+                    }
+                    <div style="position:absolute;bottom:0;right:0;width:12px;height:12px;
+                                border-radius:50%;border:2px solid white;
+                                background:${isOnline ? '#2ecc71' : '#95a5a6'};"></div>
+                </div>
+
+                <div class="member-info">
+                    <div class="member-name">${user.full_name || 'ไม่ระบุชื่อ'}</div>
+                    <div class="member-email">
+                        ${user.department_name || 'ไม่ระบุแผนก'}
+                        ${user.employee_id ? ` · ${user.employee_id}` : ''}
+                    </div>
+                </div>
+
+                <div class="member-checkbox">
+                    ${isSelected ? '<i class="fas fa-check"></i>' : ''}
+                </div>
+            </div>
+        `;
+    });
+
+    membersList.innerHTML = membersHTML;
+    this.renderSelectedMembers();
+
+    membersList.querySelectorAll('.member-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const userId = parseInt(item.dataset.userId);
+            this.toggleMemberSelection(userId);
+        });
+    });
+}
 
     renderSelectedMembers() {
         const selectedMembers = document.getElementById('selectedMembers');
@@ -4995,11 +5113,12 @@ async saveSummary(summary) {
     
     // ช่องค้นหาสมาชิก
     const memberSearch = document.getElementById('memberSearch');
-    if (memberSearch) {
-        memberSearch.addEventListener('input', (e) => {
-            this.renderMembersList(e.target.value);
-        });
-    }
+if (memberSearch) {
+    memberSearch.addEventListener('input', (e) => {
+        // เมื่อพิมพ์ค้นหา ให้กรองรายชื่อทันที
+        this.renderMembersList(e.target.value);
+    });
+}
     
     // Radio button ประเภทห้อง
     document.querySelectorAll('input[name="roomType"]').forEach(radio => {

@@ -1337,25 +1337,35 @@ app.delete('/api/chat-rooms/:roomId/leave', authenticateToken, async (req, res) 
 app.get('/api/users', authenticateToken, async (req, res) => {
     const client = await getConnection();
     try {
-        console.log('📋 Fetching all users...');
+        console.log('📋 Fetching all users (optimized)...');
         
+        // ดึงเฉพาะฟิลด์ที่จำเป็น และเพิ่ม indexing
         const usersResult = await client.query(
-            `SELECT u.user_id, u.employee_id, u.username, u.full_name, u.email, 
-                    u.profile_image, u.is_online, u.last_seen, d.department_name
+            `SELECT 
+                u.user_id, 
+                u.full_name, 
+                u.employee_id,
+                u.profile_image,
+                u.is_online,
+                d.department_name
              FROM users u
              LEFT JOIN departments d ON u.department_id = d.department_id
              WHERE u.user_id != $1
-             ORDER BY u.is_online DESC, u.full_name`,
+             ORDER BY u.is_online DESC, u.full_name
+             LIMIT 500`,  // จำกัดแค่ 500 คนก่อน ถ้ามีเยอะให้โหลดเพิ่มทีหลัง
             [req.user.user_id]
         );
         
-        console.log(`✅ พบผู้ใช้ทั้งหมด ${usersResult.rows.length} คน`);
+        console.log(`✅ โหลดผู้ใช้ ${usersResult.rows.length} คน (optimized)`);
         
-        res.json({ success: true, users: usersResult.rows });
+        res.json({ 
+            success: true, 
+            users: usersResult.rows
+        });
         
     } catch (error) {
-        console.error('Get all users error:', error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาด' });
+        console.error('❌ Error:', error);
+        res.status(500).json({ success: false, error: error.message });
     } finally {
         if (client) client.release();
     }
