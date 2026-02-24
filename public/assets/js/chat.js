@@ -46,7 +46,12 @@ class EnhancedChatApp {
         this.currentEmojiCategory = 'smileys';
 
         this.initialize();
+         window.addEventListener('userUpdated', (e) => {
+        console.log('📡 Received userUpdated event:', e.detail);
+        this.updateUserData(e.detail);
+    });
     }
+    
     // ✅ เปิด emoji picker
 openEmojiPicker() {
     const modal = document.getElementById('emojiPickerModal');
@@ -830,7 +835,19 @@ renderUsersList(users) {
     console.log('✅ Users list rendered');
 }
 async initialize() {
-    await this.checkAuth();
+    // ✅ โหลด user จาก localStorage ก่อน
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        try {
+            this.currentUser = JSON.parse(storedUser);
+            this.updateUserProfile(); // อัปเดต UI ทันที
+            console.log('👤 โหลด user จาก localStorage:', this.currentUser);
+        } catch (e) {
+            console.error('❌ parse localStorage user error:', e);
+        }
+    }
+
+    await this.checkAuth(); // เรียก API เพื่ออัปเดตข้อมูลล่าสุด
     this.initSocket();
     this.initTextToSpeech();
     this.addTTSStyles();
@@ -931,37 +948,47 @@ isAtBottom(element, threshold = 50) {
     return atBottom;
 }
     async checkAuth() {
-        const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
 
-        if (!token || !userData) {
+    if (!token || !userData) {
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             window.location.href = '/login';
             return;
         }
 
-        try {
-            const response = await fetch('/api/me', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            const data = await response.json();
-
-            if (!data.success) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
-                return;
-            }
-
-            this.currentUser = data.user;
-            this.updateUserProfile();
-        } catch (error) {
-            console.error('Auth check failed:', error);
+        // ✅ อัปเดต currentUser และ localStorage ด้วยข้อมูลล่าสุด
+        this.currentUser = data.user;
+        localStorage.setItem('user', JSON.stringify(data.user));
+        this.updateUserProfile();
+        
+        console.log('✅ อัปเดต user จาก API และบันทึกลง localStorage');
+        
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        // ✅ ถ้า API error ให้ใช้ข้อมูลจาก localStorage ที่มีอยู่แล้ว
+        if (this.currentUser) {
+            console.log('⚠️ ใช้ข้อมูล user จาก localStorage แทน');
+        } else {
             window.location.href = '/login';
         }
     }
+}
 
    initSocket() {
     const token = localStorage.getItem('token');
@@ -5647,6 +5674,12 @@ changePassword() {
     createFileMessageContent(message) {
         return `<div class="file-message">ไฟล์: ${message.file_url}</div>`;
     }
+    updateUserData(updatedUser) {
+    this.currentUser = updatedUser;
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    this.updateUserProfile();
+    console.log('✅ อัปเดต user data แล้ว:', updatedUser);
+}
 }
 
 

@@ -426,30 +426,50 @@
             }
         }
 
-        // เติมข้อมูลในฟอร์ม
-        function populateProfileForm(user) {
-            console.log('👤 เติมข้อมูลผู้ใช้:', user);
-            
-            // รูปโปรไฟล์
-            const profileImg = document.getElementById('profileImage');
-            if (profileImg) {
-                profileImg.src = user.profile_image || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-                profileImg.onerror = function() {
-                    this.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-                };
+      // เติมข้อมูลในฟอร์ม
+function populateProfileForm(user) {
+    console.log('👤 เติมข้อมูลผู้ใช้:', user);
+    
+    // ✅ ตรวจสอบและใช้รูปจาก localStorage ก่อน
+    const storedUser = localStorage.getItem('user');
+    let profileImage = user.profile_image;
+    
+    if (storedUser) {
+        try {
+            const parsed = JSON.parse(storedUser);
+            if (parsed.profile_image && !user.profile_image) {
+                profileImage = parsed.profile_image;
             }
-            
-            // ข้อมูลทั่วไป
-            document.getElementById('employeeId').value = user.employee_id || '-';
-            document.getElementById('username').value = user.username || '-';
-            document.getElementById('fullName').value = user.full_name || '';
-            document.getElementById('email').value = user.email || '';
-            document.getElementById('department').value = user.department_name || 'ไม่ระบุแผนก';
-            
-            // ชื่อใน header
-            document.getElementById('userFullName').textContent = user.full_name || 'ผู้ใช้ไม่ระบุชื่อ';
-            document.getElementById('userDepartment').textContent = `แผนก: ${user.department_name || 'ไม่ระบุ'}`;
-        }
+        } catch (e) {}
+    }
+    
+    // รูปโปรไฟล์
+    const profileImg = document.getElementById('profileImage');
+    if (profileImg) {
+        profileImg.src = profileImage || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+        profileImg.onerror = function() {
+            this.src = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+        };
+    }
+    
+    // ข้อมูลทั่วไป
+    document.getElementById('employeeId').value = user.employee_id || '-';
+    document.getElementById('username').value = user.username || '-';
+    document.getElementById('fullName').value = user.full_name || '';
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('department').value = user.department_name || 'ไม่ระบุแผนก';
+    
+    // ชื่อใน header
+    document.getElementById('userFullName').textContent = user.full_name || 'ผู้ใช้ไม่ระบุชื่อ';
+    document.getElementById('userDepartment').textContent = `แผนก: ${user.department_name || 'ไม่ระบุ'}`;
+    
+    // ✅ บันทึกข้อมูลเดิมไว้ตรวจสอบการเปลี่ยนแปลง
+    originalData = {
+        full_name: user.full_name || '',
+        email: user.email || '',
+        profile_image: profileImage || ''
+    };
+}
 
         // ตั้งค่า event listeners
         function setupEventListeners() {
@@ -519,84 +539,95 @@
             console.log('✅ เลือกรูปแล้ว:', file.name);
         }
 
-        // บันทึกโปรไฟล์
-        async function saveProfile() {
-            if (!isChanged) return;
+       // บันทึกโปรไฟล์
+async function saveProfile() {
+    if (!isChanged) return;
+    
+    const fullName = document.getElementById('fullName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    
+    // ตรวจสอบข้อมูล
+    if (!fullName) {
+        showToast('กรุณากรอกชื่อ-นามสกุล', 'error');
+        return;
+    }
+    
+    if (email && !isValidEmail(email)) {
+        showToast('รูปแบบอีเมลไม่ถูกต้อง', 'error');
+        return;
+    }
+    
+    // สร้าง FormData
+    const formData = new FormData();
+    formData.append('full_name', fullName);
+    formData.append('email', email);
+    
+    const imageFile = document.getElementById('imageInput').files[0];
+    if (imageFile) {
+        formData.append('profile_image', imageFile);
+    }
+    
+    // ส่งข้อมูล
+    showLoading(true);
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/profile', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // ✅ อัพเดท localStorage ด้วยข้อมูลใหม่ทั้งหมด
+            const updatedUser = {
+                user_id: currentUser.user_id,
+                employee_id: currentUser.employee_id,
+                username: currentUser.username,
+                full_name: data.user.full_name || fullName,
+                email: data.user.email || email,
+                department_id: currentUser.department_id,
+                department_name: currentUser.department_name,
+                profile_image: data.user.profile_image || currentUser.profile_image
+            };
             
-            const fullName = document.getElementById('fullName').value.trim();
-            const email = document.getElementById('email').value.trim();
+            localStorage.setItem('user', JSON.stringify(updatedUser));
             
-            // ตรวจสอบข้อมูล
-            if (!fullName) {
-                showToast('กรุณากรอกชื่อ-นามสกุล', 'error');
-                return;
+            // ✅ อัพเดท currentUser และ originalData
+            currentUser = updatedUser;
+            originalData = {
+                full_name: updatedUser.full_name,
+                email: updatedUser.email,
+                profile_image: updatedUser.profile_image
+            };
+            
+            // ✅ ส่ง event ไปยังหน้าอื่นๆ (ถ้ามี)
+            window.dispatchEvent(new CustomEvent('userUpdated', { detail: updatedUser }));
+            
+            showToast('บันทึกโปรไฟล์สำเร็จ', 'success');
+            isChanged = false;
+            document.getElementById('saveBtn').disabled = true;
+            
+            // อัพเดทรูปใน header
+            if (updatedUser.profile_image) {
+                document.getElementById('profileImage').src = updatedUser.profile_image;
             }
             
-            if (email && !isValidEmail(email)) {
-                showToast('รูปแบบอีเมลไม่ถูกต้อง', 'error');
-                return;
-            }
-            
-            // สร้าง FormData
-            const formData = new FormData();
-            formData.append('full_name', fullName);
-            formData.append('email', email);
-            
-            const imageFile = document.getElementById('imageInput').files[0];
-            if (imageFile) {
-                formData.append('profile_image', imageFile);
-            }
-            
-            // ส่งข้อมูล
-            showLoading(true);
-            
-            try {
-                const token = localStorage.getItem('token');
-                const response = await fetch('/api/profile', {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                        // ไม่ต้องกำหนด Content-Type สำหรับ FormData
-                    },
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    // อัพเดทข้อมูลใน localStorage
-                    if (data.user) {
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        currentUser = data.user;
-                        originalData = {
-                            full_name: data.user.full_name,
-                            email: data.user.email,
-                            profile_image: data.user.profile_image
-                        };
-                    }
-                    
-                    showToast('บันทึกโปรไฟล์สำเร็จ', 'success');
-                    isChanged = false;
-                    document.getElementById('saveBtn').disabled = true;
-                    
-                    // อัพเดทรูปใน header
-                    setTimeout(() => {
-                        if (data.user.profile_image) {
-                            document.getElementById('profileImage').src = data.user.profile_image;
-                        }
-                    }, 500);
-                    
-                } else {
-                    throw new Error(data.error || 'บันทึกไม่สำเร็จ');
-                }
-                
-            } catch (error) {
-                console.error('❌ บันทึกโปรไฟล์ผิดพลาด:', error);
-                showToast(error.message, 'error');
-            } finally {
-                showLoading(false);
-            }
+        } else {
+            throw new Error(data.error || 'บันทึกไม่สำเร็จ');
         }
+        
+    } catch (error) {
+        console.error('❌ บันทึกโปรไฟล์ผิดพลาด:', error);
+        showToast(error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
 
         // ตรวจสอบอีเมล
         function isValidEmail(email) {
