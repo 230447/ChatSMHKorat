@@ -1908,9 +1908,77 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ================ ตั้งค่าระบบส่งอีเมล (Resend) ================
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ================ ตั้งค่าระบบส่งอีเมล (Gmail SMTP + port 2525) ================
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 2525,                    // ✅ พอร์ตที่ Render ฟรีเทียร์อนุญาต
+    secure: false,                  // ✅ ต้องเป็น false เพราะ port 2525 ไม่ใช่ SSL
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
+// ✅ ฟังก์ชันส่งอีเมลพร้อมรหัส 6 หลัก (ใช้ Gmail SMTP)
+async function sendResetCodeEmail(email, name, code) {
+    console.log('📧 ===== SENDING VIA GMAIL SMTP (PORT 2525) =====');
+    console.log('📧 To:', email);
+    console.log('📧 Code:', code);
+    
+    try {
+        const mailOptions = {
+            from: `"ระบบแชท SMH Korat" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: '🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่',
+            html: `
+                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+                    <h2 style="color: #667eea; text-align: center;">🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่</h2>
+                    
+                    <p style="font-size: 16px;">สวัสดี คุณ${name}</p>
+                    
+                    <p style="font-size: 16px;">เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
+                    
+                    <p style="font-size: 16px;">กรุณาใช้รหัส 6 หลักด้านล่าง:</p>
+                    
+                    <div style="text-align: center; margin: 40px 0;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 48px; font-weight: bold; letter-spacing: 10px; padding: 20px; border-radius: 10px; display: inline-block; font-family: monospace;">
+                            ${code}
+                        </div>
+                    </div>
+                    
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0; color: #e74c3c; font-weight: bold;">
+                            ⚠️ รหัสนี้หมดอายุใน 10 นาที
+                        </p>
+                    </div>
+                    
+                    <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
+                        หากคุณไม่ได้ขอรับรหัสนี้ กรุณาละเว้นอีเมลนี้
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee;">
+                    
+                    <p style="color: #999; font-size: 12px; text-align: center;">
+                        © 2024 โรงพยาบาลเซนต์เมรี่ นครราชสีมา
+                    </p>
+                </div>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Email sent:', info.messageId);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Email error:', error);
+        return false;
+    }
+}
 
 
 
@@ -1995,81 +2063,7 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 });
 
-// ✅ ฟังก์ชันส่งอีเมลพร้อมรหัส 6 หลัก (ใช้ Resend)
-async function sendResetCodeEmail(email, name, code) {
-    console.log('📧 ===== ATTEMPTING TO SEND EMAIL =====');
-    console.log('📧 To:', email);
-    console.log('📧 Name:', name);
-    console.log('📧 Code:', code);
-    console.log('📧 API Key exists:', !!process.env.RESEND_API_KEY);
-    console.log('📧 API Key (first 10 chars):', process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 10) + '...' : 'missing');
-    
-    try {
-        console.log('📧 Calling resend.emails.send...');
-        
-        const { data, error } = await resend.emails.send({
-            from: 'ระบบแชท SMH <onboarding@resend.dev>',
-            to: [email],
-            subject: '🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่',
-            html: `
-                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
-                    <h2 style="color: #667eea; text-align: center;">🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่</h2>
-                    
-                    <p style="font-size: 16px;">สวัสดี คุณ${name}</p>
-                    
-                    <p style="font-size: 16px;">เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
-                    
-                    <p style="font-size: 16px;">กรุณาใช้รหัส 6 หลักด้านล่าง:</p>
-                    
-                    <div style="text-align: center; margin: 40px 0;">
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 48px; font-weight: bold; letter-spacing: 10px; padding: 20px; border-radius: 10px; display: inline-block; font-family: monospace;">
-                            ${code}
-                        </div>
-                    </div>
-                    
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0; color: #e74c3c; font-weight: bold;">
-                            ⚠️ รหัสนี้หมดอายุใน 10 นาที
-                        </p>
-                        <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
-                            ห้ามแชร์รหัสนี้ให้ผู้อื่น
-                        </p>
-                    </div>
-                    
-                    <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
-                        หากคุณไม่ได้ขอรับรหัสนี้ กรุณาละเว้นอีเมลนี้
-                    </p>
-                    
-                    <hr style="border: none; border-top: 1px solid #eee;">
-                    
-                    <p style="color: #999; font-size: 12px; text-align: center;">
-                        © 2024 โรงพยาบาลเซนต์เมรี่ นครราชสีมา
-                    </p>
-                </div>
-            `
-        });
 
-        if (error) {
-            console.error('❌ Resend error FULL:', error);
-            console.error('❌ Error name:', error.name);
-            console.error('❌ Error message:', error.message);
-            console.error('❌ Error statusCode:', error.statusCode);
-            return false;
-        }
-
-        console.log('✅ Resend success! Full response:', data);
-        console.log('✅ Email ID:', data?.id);
-        console.log(`✅ ส่งรหัส ${code} ไปยัง ${email} สำเร็จ`);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ ส่งอีเมลล้มเหลว (exception):', error);
-        console.error('❌ Exception name:', error.name);
-        console.error('❌ Exception message:', error.message);
-        console.error('❌ Exception stack:', error.stack);
-        return false;
-    }
-}
 
 // ✅ API: ตรวจสอบรหัส 6 หลัก
 app.post('/api/verify-reset-code', async (req, res) => {
