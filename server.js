@@ -564,7 +564,7 @@ async function generateWithGemini(prompt) {
                 temperature: 0.3,
                 topP: 0.8,
                 topK: 64,
-                maxOutputTokens: 1500,
+                maxOutputTokens: 3000,
             }
         });
 
@@ -1508,7 +1508,7 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         const actualTimeframe = `${firstMsg.date} ${firstMsg.time} - ${lastMsg.date} ${lastMsg.time}`;
         
         // สร้าง Prompt
-        const prompt = `คุณเป็นผู้ช่วยวิเคราะห์และสรุปการสนทนาสำหรับโรงพยาบาล
+        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล มีหน้าที่สรุปการสนทนาให้ละเอียด ชัดเจน และมีประโยชน์สูงสุดสำหรับทีมแพทย์และพยาบาล
 
 **โปรดวิเคราะห์และสรุปการสนทนาต่อไปนี้ โดยอิงจากเนื้อหาที่ให้มาเท่านั้น ห้ามเติมข้อมูลจากภายนอก**
 
@@ -1523,10 +1523,33 @@ ${formattedMessages}
 ${custom_instruction ? `\n**คำแนะนำเพิ่มเติม:** ${custom_instruction}` : ''}
 
 **คำสั่ง:**
-กรุณาสรุปเป็นภาษาไทย โดยมีโครงสร้างดังนี้:
-1. ภาพรวมของการสนทนา (สรุปสั้นๆ ว่าคุยเรื่องอะไร)
-2. ประเด็นสำคัญ (เรียงตามความสำคัญ ใช้ bullet points)
-3. ข้อสรุปหรือแผนการดำเนินงาน (ถ้ามี)`;
+กรุณาสรุปเป็นภาษาไทย โดยมีโครงสร้างดังนี้ **ทุกหัวข้อต้องอ้างอิงจากเนื้อหาที่ให้มาเท่านั้น**:
+
+**1. 📌 สรุปภาพรวม (2-4 ประโยค)**
+บอกให้ชัดว่าการสนทนานี้เกี่ยวกับอะไร ใครคุยกับใคร และผลลัพธ์โดยรวมคืออะไร
+
+**2. 🔑 ประเด็นสำคัญที่พูดถึง**
+ระบุทุกประเด็นที่มีการกล่าวถึง เรียงตามลำดับเวลา พร้อมบอกว่าใครพูดและพูดว่าอะไร เช่น:
+- [ชื่อ]: พูดถึง... → สาระสำคัญคือ...
+- [ชื่อ]: แจ้งว่า... → ผลที่ได้คือ...
+
+**3. ✅ มติ / ข้อตกลง / สิ่งที่ต้องทำ**
+ถ้ามีการตกลง นัดหมาย สั่งการ หรือวางแผน ให้ระบุให้ครบ:
+- สิ่งที่ต้องทำ: ...
+- ผู้รับผิดชอบ: ...
+- กำหนดเวลา: ...
+
+**4. ⚠️ ประเด็นที่ยังค้างอยู่ / ต้องติดตาม**
+ระบุสิ่งที่ยังไม่ได้รับการแก้ไขหรือต้องติดตามต่อ (ถ้าไม่มีให้ระบุว่า "ไม่มี")
+
+**5. 📊 สถิติการสนทนา**
+- ผู้มีส่วนร่วมมากที่สุด: [ชื่อ] (โดยประมาณ)
+- ช่วงเวลาที่คุยมากที่สุด: ...
+- โทนการสนทนา: เป็นทางการ / กึ่งทางการ / ด่วน / ปกติ
+
+${custom_instruction ? `\n**คำแนะนำพิเศษจากผู้ใช้:** ${custom_instruction}\n` : ''}
+
+⚠️ ข้อห้าม: ห้ามเติมข้อมูลที่ไม่มีในการสนทนา ห้ามสรุปแบบกว้างๆ โดยไม่อ้างอิงเนื้อหาจริง`;
 
         // เรียกใช้ Gemini AI
         let summary;
@@ -1545,7 +1568,7 @@ ${custom_instruction ? `\n**คำแนะนำเพิ่มเติม:** 
                         temperature: 0.3,
                         topP: 0.8,
                         topK: 64,
-                        maxOutputTokens: 1500,
+                        maxOutputTokens: 3000,
                     }
                 });
 
@@ -1712,7 +1735,94 @@ app.post('/api/chat-summary/save', authenticateToken, async (req, res) => {
         if (client) client.release();
     }
 });
+// GET /api/chat-summary/details - ดึงข้อมูลสรุปสำหรับหน้ารายงาน
+app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
+    const client = await getConnection();
+    try {
+        const { id: summaryId, room_id } = req.query;
 
+        console.log(`📋 ดึงข้อมูล summary: id=${summaryId}, room_id=${room_id}`);
+
+        if (!summaryId) {
+            return res.status(400).json({
+                success: false,
+                error: 'กรุณาระบุ summary id'
+            });
+        }
+
+        // ดึงข้อมูล summary จาก database
+        const summaryResult = await client.query(
+            `SELECT 
+                summary_id,
+                chat_content,
+                summary,
+                created_at,
+                saved_at
+             FROM chat_summary_new
+             WHERE summary_id = $1`,
+            [summaryId]
+        );
+
+        if (summaryResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'ไม่พบข้อมูลสรุป'
+            });
+        }
+
+        const summaryData = summaryResult.rows[0];
+
+        // ดึงข้อมูลห้อง (ถ้ามี room_id)
+        let roomName = 'ไม่ระบุห้อง';
+        let messageCount = 0;
+
+        if (room_id) {
+            const roomResult = await client.query(
+                'SELECT room_name FROM chat_rooms WHERE room_id = $1',
+                [room_id]
+            );
+            if (roomResult.rows.length > 0) {
+                roomName = roomResult.rows[0].room_name;
+            }
+
+            // นับจำนวนบรรทัดใน chat_content เพื่อประมาณจำนวนข้อความ
+            if (summaryData.chat_content) {
+                messageCount = summaryData.chat_content.split('\n').filter(l => l.trim()).length;
+            }
+        }
+
+        // แปลงวันที่เป็นภาษาไทย
+        const createdDate = new Date(summaryData.created_at);
+        const dateRange = createdDate.toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        res.json({
+            success: true,
+            summary_id: summaryData.summary_id,
+            summary: summaryData.summary,
+            chat_content: summaryData.chat_content,
+            room_name: roomName,
+            room_id: room_id,
+            date_range: dateRange,
+            message_count: messageCount,
+            created_at: summaryData.created_at,
+            saved_at: summaryData.saved_at
+        });
+
+    } catch (error) {
+        console.error('❌ Get summary details error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'เกิดข้อผิดพลาดในการดึงข้อมูลสรุป',
+            details: error.message
+        });
+    } finally {
+        if (client) client.release();
+    }
+});
 // ========================================
 // Socket.IO handling
 // ========================================
