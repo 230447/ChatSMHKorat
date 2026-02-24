@@ -1908,19 +1908,9 @@ app.use((err, req, res, next) => {
     });
 });
 
-// ================ ตั้งค่าระบบส่งอีเมล ================
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+// ================ ตั้งค่าระบบส่งอีเมล (Resend) ================
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ฟังก์ชันส่งอีเมลรีเซ็ตรหัสผ่าน
 async function sendPasswordResetEmail(email, name, resetLink) {
@@ -2035,33 +2025,56 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 });
 
-// ✅ เพิ่มฟังก์ชันส่งอีเมลรหัส 6 หลัก (วางต่อจากฟังก์ชันเดิม)
+// ✅ ฟังก์ชันส่งอีเมลพร้อมรหัส 6 หลัก (ใช้ Resend)
 async function sendResetCodeEmail(email, name, code) {
     try {
-        const mailOptions = {
-            from: `"ระบบแชท SMH Korat" <${process.env.EMAIL_USER}>`,
-            to: email,
+        const { data, error } = await resend.emails.send({
+            from: 'ระบบแชท SMH <onboarding@resend.dev>', // ใช้ของ Resend ก่อน
+            to: [email],
             subject: '🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่',
             html: `
-                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
                     <h2 style="color: #667eea; text-align: center;">🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่</h2>
-                    <p>สวัสดี คุณ${name}</p>
-                    <p>เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
-                    <p>กรุณาใช้รหัส 6 หลักด้านล่างเพื่อดำเนินการ:</p>
+                    
+                    <p style="font-size: 16px;">สวัสดี คุณ${name}</p>
+                    
+                    <p style="font-size: 16px;">เราได้รับคำขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ</p>
+                    
+                    <p style="font-size: 16px;">กรุณาใช้รหัส 6 หลักด้านล่าง:</p>
+                    
                     <div style="text-align: center; margin: 40px 0;">
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 48px; font-weight: bold; letter-spacing: 10px; padding: 20px; border-radius: 10px; display: inline-block;">
                             ${code}
                         </div>
                     </div>
-                    <p style="color: #e74c3c;">⚠️ รหัสนี้หมดอายุใน 10 นาที</p>
-                    <p>หากคุณไม่ได้ขอรับรหัสนี้ กรุณาละเว้นอีเมลนี้</p>
+                    
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <p style="margin: 0; color: #e74c3c;">
+                            ⚠️ รหัสนี้หมดอายุใน 10 นาที
+                        </p>
+                    </div>
+                    
+                    <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
+                        หากคุณไม่ได้ขอรับรหัสนี้ กรุณาละเว้นอีเมลนี้
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee;">
+                    
+                    <p style="color: #999; font-size: 12px; text-align: center;">
+                        © 2024 โรงพยาบาลเซนต์เมรี่ นครราชสีมา
+                    </p>
                 </div>
             `
-        };
+        });
 
-        await transporter.sendMail(mailOptions);
+        if (error) {
+            console.error('❌ Resend error:', error);
+            return false;
+        }
+
         console.log(`📧 ส่งรหัส 6 หลักไปยัง ${email} สำเร็จ`);
         return true;
+        
     } catch (error) {
         console.error('❌ ส่งอีเมลล้มเหลว:', error);
         return false;
