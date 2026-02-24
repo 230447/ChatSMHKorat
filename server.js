@@ -1917,6 +1917,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // ================ API: ลืมรหัสผ่าน (ส่งรหัส 6 หลัก) ================
 app.post('/api/forgot-password', async (req, res) => {
     const { email } = req.body;
+    console.log('📨 ===== FORGOT PASSWORD REQUEST =====');
+    console.log('📨 Email received:', email);
     
     if (!email) {
         return res.status(400).json({ 
@@ -1995,9 +1997,15 @@ app.post('/api/forgot-password', async (req, res) => {
 
 // ✅ ฟังก์ชันส่งอีเมลพร้อมรหัส 6 หลัก (ใช้ Resend)
 async function sendResetCodeEmail(email, name, code) {
+    console.log('📧 ===== ATTEMPTING TO SEND EMAIL =====');
+    console.log('📧 To:', email);
+    console.log('📧 Name:', name);
+    console.log('📧 Code:', code);
+    console.log('📧 API Key exists:', !!process.env.RESEND_API_KEY);
+    
     try {
         const { data, error } = await resend.emails.send({
-            from: 'ระบบแชท SMH <onboarding@resend.dev>', // ใช้ของ Resend ก่อน
+            from: 'ระบบแชท SMH <onboarding@resend.dev>',
             to: [email],
             subject: '🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่',
             html: `
@@ -2011,14 +2019,17 @@ async function sendResetCodeEmail(email, name, code) {
                     <p style="font-size: 16px;">กรุณาใช้รหัส 6 หลักด้านล่าง:</p>
                     
                     <div style="text-align: center; margin: 40px 0;">
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 48px; font-weight: bold; letter-spacing: 10px; padding: 20px; border-radius: 10px; display: inline-block;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-size: 48px; font-weight: bold; letter-spacing: 10px; padding: 20px; border-radius: 10px; display: inline-block; font-family: monospace;">
                             ${code}
                         </div>
                     </div>
                     
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                        <p style="margin: 0; color: #e74c3c;">
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0; color: #e74c3c; font-weight: bold;">
                             ⚠️ รหัสนี้หมดอายุใน 10 นาที
+                        </p>
+                        <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
+                            ห้ามแชร์รหัสนี้ให้ผู้อื่น
                         </p>
                     </div>
                     
@@ -2036,15 +2047,16 @@ async function sendResetCodeEmail(email, name, code) {
         });
 
         if (error) {
-            console.error('❌ Resend error:', error);
+            console.error('❌ Resend error details:', error);
             return false;
         }
 
-        console.log(`📧 ส่งรหัส 6 หลักไปยัง ${email} สำเร็จ`);
+        console.log('✅ Resend success:', data);
+        console.log(`📧 ส่งรหัส ${code} ไปยัง ${email} สำเร็จ`);
         return true;
         
     } catch (error) {
-        console.error('❌ ส่งอีเมลล้มเหลว:', error);
+        console.error('❌ ส่งอีเมลล้มเหลว (exception):', error);
         return false;
     }
 }
