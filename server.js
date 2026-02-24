@@ -2002,8 +2002,11 @@ async function sendResetCodeEmail(email, name, code) {
     console.log('📧 Name:', name);
     console.log('📧 Code:', code);
     console.log('📧 API Key exists:', !!process.env.RESEND_API_KEY);
+    console.log('📧 API Key (first 10 chars):', process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.substring(0, 10) + '...' : 'missing');
     
     try {
+        console.log('📧 Calling resend.emails.send...');
+        
         const { data, error } = await resend.emails.send({
             from: 'ระบบแชท SMH <onboarding@resend.dev>',
             to: [email],
@@ -2047,16 +2050,23 @@ async function sendResetCodeEmail(email, name, code) {
         });
 
         if (error) {
-            console.error('❌ Resend error details:', error);
+            console.error('❌ Resend error FULL:', error);
+            console.error('❌ Error name:', error.name);
+            console.error('❌ Error message:', error.message);
+            console.error('❌ Error statusCode:', error.statusCode);
             return false;
         }
 
-        console.log('✅ Resend success:', data);
-        console.log(`📧 ส่งรหัส ${code} ไปยัง ${email} สำเร็จ`);
+        console.log('✅ Resend success! Full response:', data);
+        console.log('✅ Email ID:', data?.id);
+        console.log(`✅ ส่งรหัส ${code} ไปยัง ${email} สำเร็จ`);
         return true;
         
     } catch (error) {
         console.error('❌ ส่งอีเมลล้มเหลว (exception):', error);
+        console.error('❌ Exception name:', error.name);
+        console.error('❌ Exception message:', error.message);
+        console.error('❌ Exception stack:', error.stack);
         return false;
     }
 }
