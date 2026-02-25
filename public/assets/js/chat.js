@@ -781,8 +781,8 @@ renderUsersList(users) {
     
     let html = '';
     users.forEach(user => {
-        // ✅ บังคับให้แสดงเป็นออนไลน์เสมอ (เพราะมาจาก API online แล้ว)
-        const isOnline = true;
+        // ✅ ใช้ค่าจริงจาก API ไม่บังคับ
+        const isOnline = user.is_online === 1 || user.is_online === true || user.is_online === '1';
         
         // ✅ ตรวจสอบว่ามีรูปโปรไฟล์หรือไม่
         const hasProfileImage = user.profile_image && 
@@ -796,7 +796,7 @@ renderUsersList(users) {
                     <div class="user-avatar">
                         <img src="${user.profile_image}" alt="${user.full_name}" 
                              onerror="this.src='/assets/images/default-avatar.png'; this.onerror=null;">
-                        <div class="online-indicator online"></div>
+                        <div class="online-indicator ${isOnline ? 'online' : 'offline'}"></div>
                     </div>
                     <div class="user-details">
                         <div class="user-name">${user.full_name}</div>
@@ -804,7 +804,9 @@ renderUsersList(users) {
                         <div class="user-employee-id">${user.employee_id || ''}</div>
                     </div>
                     <div class="user-status">
-                        <span class="status-text online">ออนไลน์</span>
+                        <span class="status-text ${isOnline ? 'online' : 'offline'}">
+                            ${isOnline ? 'ออนไลน์' : 'ออฟไลน์'}
+                        </span>
                     </div>
                 </div>
             `;
@@ -816,7 +818,7 @@ renderUsersList(users) {
                 <div class="user-item" data-user-id="${user.user_id}">
                     <div class="user-avatar avatar-placeholder">
                         <span>${initial}</span>
-                        <div class="online-indicator online"></div>
+                        <div class="online-indicator ${isOnline ? 'online' : 'offline'}"></div>
                     </div>
                     <div class="user-details">
                         <div class="user-name">${user.full_name}</div>
@@ -824,7 +826,9 @@ renderUsersList(users) {
                         <div class="user-employee-id">${user.employee_id || ''}</div>
                     </div>
                     <div class="user-status">
-                        <span class="status-text online">ออนไลน์</span>
+                        <span class="status-text ${isOnline ? 'online' : 'offline'}">
+                            ${isOnline ? 'ออนไลน์' : 'ออฟไลน์'}
+                        </span>
                     </div>
                 </div>
             `;
