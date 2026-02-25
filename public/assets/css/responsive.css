@@ -1,0 +1,616 @@
+/* ========================================
+   SMH Hospital Chat - Responsive Fixes
+   ใส่ไฟล์นี้ต่อท้าย CSS ทุกไฟล์ หรือ link แยกก็ได้
+   ======================================== */
+
+/* ========================================
+   GLOBAL - ใช้กับทุกหน้า
+   ======================================== */
+
+/* Safe area สำหรับ iPhone notch */
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Touch targets ต้องไม่เล็กกว่า 44px */
+button, .btn, a.btn, input[type="submit"],
+.tab-btn, .btn-icon, .btn-send {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+/* ป้องกัน text overflow บน mobile */
+* {
+    word-break: break-word;
+}
+
+/* Smooth scrolling บน iOS */
+html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+}
+
+/* ========================================
+   LANDING PAGE (index.html / style.css)
+   ======================================== */
+
+/* Hamburger Button - ซ่อนบน desktop */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--primary-color, #2c3e50);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 8px;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    /* Header */
+    .landing-header .container {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap;
+        padding: 12px 16px;
+    }
+
+    .logo h1 {
+        font-size: 0.95rem !important;
+    }
+
+    /* Hamburger แสดงบน mobile */
+    .hamburger-btn {
+        display: flex;
+        z-index: 1001;
+    }
+
+    /* Nav - ซ่อนก่อน เปิดด้วย hamburger */
+    nav {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(44, 62, 80, 0.97);
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        z-index: 1000;
+        padding: 20px;
+    }
+
+    nav.open {
+        display: flex;
+    }
+
+    nav a {
+        color: white !important;
+        font-size: 1.2rem;
+        padding: 12px 24px;
+    }
+
+    .btn-login, .btn-register {
+        width: 200px;
+        text-align: center;
+        padding: 12px 24px !important;
+    }
+
+    /* ปุ่มปิด nav */
+    nav .close-nav {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: white;
+        font-size: 1.5rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        min-height: 44px;
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Hero */
+    .hero {
+        padding: 48px 0 40px;
+    }
+
+    .hero .container {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        text-align: center;
+    }
+
+    .hero-content h2 {
+        font-size: 1.8rem;
+    }
+
+    .hero-image {
+        order: -1; /* รูปอยู่บน content */
+        max-height: 220px;
+        overflow: hidden;
+        border-radius: 12px;
+    }
+
+    .hero-image img {
+        object-fit: cover;
+        height: 220px;
+        width: 100%;
+    }
+
+    .hero-buttons {
+        justify-content: center;
+    }
+
+    .hero-buttons .btn-primary,
+    .hero-buttons .btn-secondary {
+        flex: 1;
+        max-width: 160px;
+    }
+
+    /* Sections spacing */
+    .features, .how-it-works, .departments, .cta {
+        padding: 48px 0;
+    }
+
+    /* Footer */
+    .footer {
+        padding: 40px 0 calc(20px + var(--safe-bottom));
+    }
+
+    /* Steps */
+    .steps {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .step {
+        padding: 20px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .steps {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hero-buttons .btn-primary,
+    .hero-buttons .btn-secondary {
+        max-width: 260px;
+        width: 100%;
+    }
+
+    .cta h2 {
+        font-size: 1.5rem;
+    }
+}
+
+/* ========================================
+   AUTH PAGES (login.html / register.html)
+   ======================================== */
+
+@media (max-width: 992px) {
+    .auth-container {
+        grid-template-columns: 1fr;
+    }
+
+    .hospital-info {
+        display: none;
+    }
+
+    .auth-card {
+        min-height: 100vh;
+        padding: 32px 24px;
+    }
+}
+
+@media (max-width: 576px) {
+    .auth-card {
+        padding: 24px 16px;
+    }
+
+    .auth-header .logo h1 {
+        font-size: 1.1rem;
+    }
+
+    .auth-header h2 {
+        font-size: 1.4rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 0;
+    }
+
+    /* Input ใหญ่ขึ้นบน mobile */
+    input, select, textarea {
+        font-size: 16px !important; /* ป้องกัน iOS zoom */
+        padding: 14px 15px;
+        min-height: 48px;
+    }
+
+    .btn-block {
+        min-height: 50px;
+        font-size: 16px;
+    }
+
+    .form-options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}
+
+/* ========================================
+   CHAT PAGE (chat.html / chat.css)
+   ======================================== */
+
+/* Mobile hamburger button ใน chat */
+.mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-primary, #2c3e50);
+    font-size: 1.2rem;
+    cursor: pointer;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.2s;
+    margin-right: 8px;
+}
+
+.mobile-menu-btn:hover {
+    background: var(--light-bg, #f8f9fa);
+}
+
+@media (max-width: 768px) {
+    /* แสดงปุ่มเมนู */
+    .mobile-menu-btn {
+        display: flex;
+    }
+
+    /* Chat app layout */
+    .chat-app {
+        grid-template-columns: 1fr !important;
+        height: 100dvh; /* dynamic viewport height - ป้องกัน keyboard */
+    }
+
+    /* Sidebar */
+    .sidebar {
+        position: fixed !important;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: min(280px, 85vw) !important;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 200;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Overlay */
+    .mobile-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+        z-index: 199;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .mobile-overlay.show {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    /* Main chat area */
+    .main-chat {
+        height: 100dvh;
+        width: 100%;
+    }
+
+    /* Chat header */
+    .chat-header {
+        padding: 10px 12px;
+        padding-top: calc(10px + var(--safe-top));
+    }
+
+    .chat-info h3 {
+        font-size: 14px !important;
+    }
+
+    .chat-info p {
+        font-size: 11px;
+    }
+
+    /* ซ่อนปุ่มบางอันบน mobile เพื่อประหยัดพื้นที่ */
+    .chat-actions .btn-icon:nth-child(n+4) {
+        display: none;
+    }
+
+    /* Messages */
+    .messages-list {
+        padding: 12px !important;
+    }
+
+    .message.sent,
+    .message.received {
+        max-width: 88% !important;
+    }
+
+    /* Message input area */
+    .message-input-area {
+        padding: 10px 12px;
+        padding-bottom: calc(10px + var(--safe-bottom));
+    }
+
+    .input-container textarea {
+        font-size: 16px !important; /* ป้องกัน iOS zoom */
+        min-height: 44px;
+    }
+
+    .btn-send {
+        width: 44px !important;
+        height: 44px !important;
+        flex-shrink: 0;
+    }
+
+    /* Input tools */
+    .input-tools {
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .input-tools .btn-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Notification toast */
+    .notification-toast {
+        bottom: calc(80px + var(--safe-bottom)) !important;
+        left: 12px !important;
+        right: 12px !important;
+        max-width: none !important;
+    }
+
+    /* Sidebar info panel */
+    .chat-app.sidebar-open {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Avatar เล็กลง */
+    .message-avatar {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    /* Message text เล็กลงนิด */
+    .message-content {
+        padding: 10px 14px;
+    }
+
+    /* Tabs ใน sidebar */
+    .tab-btn span {
+        display: none; /* แสดงแค่ icon */
+    }
+
+    .tab-btn {
+        padding: 10px !important;
+    }
+}
+
+/* Landscape mode บน mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .messages-list {
+        padding: 8px 12px !important;
+    }
+
+    .message-input-area {
+        padding: 8px 12px;
+        padding-bottom: calc(8px + var(--safe-bottom));
+    }
+
+    .chat-header {
+        padding: 8px 12px;
+    }
+
+    .welcome-message {
+        padding: 20px;
+    }
+}
+
+/* ========================================
+   PROFILE PAGE (profile.html)
+   ======================================== */
+
+@media (max-width: 600px) {
+    .profile-container {
+        max-width: 100%;
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    body:has(.profile-container) {
+        padding: 0 !important;
+        align-items: flex-start;
+    }
+
+    .profile-header {
+        padding: 20px 16px;
+        padding-top: calc(20px + var(--safe-top));
+    }
+
+    .profile-body {
+        padding: 20px 16px;
+        padding-bottom: calc(20px + var(--safe-bottom));
+    }
+
+    .profile-img {
+        width: 90px !important;
+        height: 90px !important;
+    }
+
+    .btn-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn {
+        min-height: 48px;
+    }
+}
+
+/* ========================================
+   FORGOT PASSWORD / VERIFY CODE / RESET PASSWORD
+   ======================================== */
+
+@media (max-width: 480px) {
+    /* container cards */
+    .container:has(form), .card {
+        padding: 28px 20px !important;
+        border-radius: 16px;
+    }
+
+    /* Code digits ยืนยัน OTP */
+    .code-digit {
+        width: calc((100% - 50px) / 6) !important;
+        height: 56px !important;
+        font-size: 24px !important;
+        min-width: 40px;
+    }
+
+    .code-input-container {
+        gap: 6px !important;
+    }
+}
+
+/* ========================================
+   REPORT PAGE (report.html)
+   ======================================== */
+
+@media (max-width: 768px) {
+    .report-container {
+        padding: 16px !important;
+        min-height: unset !important;
+        border-radius: 0;
+    }
+
+    body:has(.report-container) {
+        padding: 0 !important;
+    }
+
+    .action-buttons {
+        position: fixed;
+        bottom: calc(10px + var(--safe-bottom));
+        right: 10px;
+        left: 10px;
+        flex-direction: row !important;
+        gap: 8px;
+    }
+
+    .btn-report {
+        flex: 1;
+        padding: 10px 12px !important;
+        font-size: 13px !important;
+        justify-content: center;
+    }
+
+    .hospital-name {
+        font-size: 18px !important;
+    }
+
+    .report-title {
+        font-size: 20px !important;
+    }
+
+    /* เพิ่ม padding ด้านล่าง เผื่อปุ่มทับ */
+    .report-container {
+        padding-bottom: 80px !important;
+    }
+}
+
+/* ========================================
+   TABLET (768px - 1024px)
+   ======================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Chat sidebar เล็กลงบน tablet */
+    .chat-app {
+        grid-template-columns: 260px 1fr !important;
+    }
+
+    .sidebar {
+        width: 260px !important;
+    }
+
+    /* Auth หน้า login/register ยังแสดง 2 คอลัมน์ */
+    .auth-container {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* ซ่อน hospital info ถ้า screen แคบ */
+    @media (max-width: 900px) {
+        .hospital-info {
+            display: none;
+        }
+        .auth-container {
+            grid-template-columns: 1fr;
+        }
+        .auth-card {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+    }
+
+    /* Report */
+    .report-container {
+        padding: 20mm 15mm !important;
+    }
+}
+
+/* ========================================
+   LARGE DESKTOP (1440px+)
+   ======================================== */
+
+@media (min-width: 1440px) {
+    .chat-app {
+        grid-template-columns: 340px 1fr !important;
+    }
+
+    .message.sent,
+    .message.received {
+        max-width: 65% !important;
+    }
+}
