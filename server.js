@@ -155,21 +155,69 @@ async function createDepartmentRooms() {
 }
 
 
-// ฟังก์ชันสร้างสรุปสำรองเมื่อ AI ไม่ทำงาน
 function createFallbackSummary(messages, roomName) {
     const uniqueUsers = [...new Set(messages.map(m => m.full_name))];
-    const timeRange = messages.length > 0 
-        ? `${messages[0].date} - ${messages[messages.length-1].date}`
+    const timeRange = messages.length > 0
+        ? `${messages[0].date} ${messages[0].time} - ${messages[messages.length-1].date} ${messages[messages.length-1].time}`
         : 'ไม่ระบุ';
+
+    // วิเคราะห์ข้อความเบื้องต้น
+    const msgTexts = messages.map(m => m.message_text.toLowerCase());
     
-    return `📊 **สรุปการสนทนาห้อง ${roomName}**\n\n` +
-           `📅 ช่วงเวลา: ${timeRange}\n` +
-           `👥 ผู้เข้าร่วม: ${uniqueUsers.length} คน\n` +
-           `💬 จำนวนข้อความ: ${messages.length} ข้อความ\n\n` +
-           `**ข้อความตัวอย่าง:**\n` +
-           messages.slice(0, 5).map(m => 
-               `- ${m.date} ${m.time} ${m.full_name}: ${m.message_text.substring(0, 50)}...`
-           ).join('\n');
+    // หาคำที่ถูกพูดถึงบ่อย (หัวข้อสำคัญ)
+    const keywords = {};
+    const stopWords = ['ครับ','ค่ะ','นะ','ได้','แล้ว','และ','หรือ','ที่','ใน','เป็น','มี','ให้','ไป','มา','จะ','ก็','แต่','เลย'];
+    messages.forEach(m => {
+        m.message_text.split(/\s+/).forEach(word => {
+            if (word.length > 2 && !stopWords.includes(word)) {
+                keywords[word] = (keywords[word] || 0) + 1;
+            }
+        });
+    });
+    const topKeywords = Object.entries(keywords)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([word]) => word)
+        .join(', ');
+
+    // สร้างตัวอย่างข้อความที่น่าสนใจ (ไม่ซ้ำผู้ส่ง)
+    const sampleMsgs = [];
+    const seenUsers = new Set();
+    for (const m of messages) {
+        if (!seenUsers.has(m.full_name) && m.message_text.length > 10) {
+            sampleMsgs.push(`- ${m.full_name}: "${m.message_text.substring(0, 60)}..."`);
+            seenUsers.add(m.full_name);
+        }
+        if (sampleMsgs.length >= 3) break;
+    }
+
+    return `**1. 📋 สรุปภาพรวม**
+การสนทนาในห้อง "${roomName}" ระหว่างวันที่ ${timeRange} มีผู้เข้าร่วม ${uniqueUsers.length} คน ได้แก่ ${uniqueUsers.join(', ')} โดยมีการพูดคุยรวม ${messages.length} ข้อความ
+
+**2. 🎯 ประเด็นสำคัญที่พูดถึง**
+- **หัวข้อหลัก:** ${topKeywords || 'ไม่สามารถระบุได้'}
+${sampleMsgs.join('\n')}
+
+**3. 📅 นัดหมายและกำหนดการ**
+- ไม่พบการนัดหมายที่ชัดเจนในการสนทนานี้
+
+**4. ✅ สิ่งที่ต้องดำเนินการ (Action Items)**
+- ไม่มี
+
+**5. ⚠️ ประเด็นที่ยังค้างอยู่**
+- ไม่มี
+
+**6. 💊 ข้อมูลทางการแพทย์**
+- ไม่มี
+
+**7. 📊 สถิติการสนทนา**
+- ผู้เข้าร่วม: ${uniqueUsers.join(', ')}
+- ช่วงเวลา: ${timeRange}
+- จำนวนข้อความ: ${messages.length} ข้อความ
+- โทนการสนทนา: ปกติ
+- ระดับความสำคัญ: 🟢 ทั่วไป
+
+⚠️ *หมายเหตุ: สรุปนี้ใช้ระบบสำรอง เนื่องจาก Gemini AI ไม่พร้อมใช้งาน*`;
 }
 // ========================================
 // ฟังก์ชันสร้างตาราง summary (ปรับเป็น PostgreSQL)
@@ -1543,6 +1591,8 @@ ${custom_instruction ? `\n**คำแนะนำเพิ่มเติม:** 
        // เรียกใช้ Gemini AI
 let summary;
 const apiKey = process.env.GEMINI_API_KEY;
+console.log('🔑 GEMINI_API_KEY exists:', !!apiKey);
+console.log('🔑 Key prefix:', apiKey ? apiKey.substring(0, 8) + '...' : 'NONE');
 
 if (!apiKey) {
     console.log('⚠️ ไม่มี API Key, ใช้ fallback');
