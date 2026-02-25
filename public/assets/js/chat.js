@@ -4946,13 +4946,76 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
 }
 
 formatSummary(summary) {
-    // แปลง markdown-like text เป็น HTML
-    return summary
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/^- (.+)$/gm, '<li>$1</li>')
-        .replace(/^(\d+)\. (.+)$/gm, '<h4>$1. $2</h4>')
-        .replace(/\n\n/g, '<br><br>')
-        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+    if (!summary) return '<p class="text-muted">ไม่มีข้อมูล</p>';
+    
+    const lines = summary.split('\n');
+    let html = '';
+    let inList = false;
+    
+    const closeList = () => {
+        if (inList) { html += '</ul>'; inList = false; }
+    };
+    
+    lines.forEach(line => {
+        const trimmed = line.trim();
+        
+        // บรรทัดว่าง
+        if (!trimmed) {
+            closeList();
+            html += '<br>';
+            return;
+        }
+        
+        // ✅ หัวข้อหลัก: **1. 📋 สรุปภาพรวม**
+        if (/^\*\*(\d+\.\s*[📌🔑✅⚠️📊].*?)\*\*$/.test(trimmed) ||
+            /^\*\*(\d+\.\s*.+?)\*\*$/.test(trimmed) ||
+            /^\*\*([📌🔑✅⚠️📊].+?)\*\*$/.test(trimmed)) {
+            closeList();
+            const heading = trimmed.replace(/^\*\*|\*\*$/g, '');
+            html += `<div class="summary-section-block"><h3>${heading}</h3>`;
+            return;
+        }
+        
+        // ✅ หัวข้อรอง: **1.1 ชื่อเรื่อง**
+        if (/^\*\*(\d+\.\d+\.\s*.+?)\*\*$/.test(trimmed)) {
+            closeList();
+            const heading = trimmed.replace(/^\*\*|\*\*$/g, '');
+            html += `<h4 style="color:#0d6efd; margin:15px 0 8px 0;">${heading}</h4>`;
+            return;
+        }
+        
+        // ✅ bullet list: - หรือ •
+        if (/^[-•]\s/.test(trimmed)) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            const content = trimmed.replace(/^[-•]\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html += `<li>${content}</li>`;
+            return;
+        }
+        
+        // ✅ numbered list: 1. 2. ...
+        if (/^\d+\.\s/.test(trimmed) && !trimmed.match(/^\*\*/)) {
+            closeList();
+            const num = trimmed.match(/^(\d+)/)[1];
+            const content = trimmed.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html += `<p><strong>${num}.</strong> ${content}</p>`;
+            return;
+        }
+        
+        // ✅ horizontal rule
+        if (/^[-—=]{3,}$/.test(trimmed)) {
+            closeList();
+            html += '<hr>';
+            return;
+        }
+        
+        // ✅ paragraph ทั่วไป
+        closeList();
+        const content = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<p>${content}</p>`;
+    });
+    
+    closeList();
+    return html;
 }
 
 async saveSummary(summary) {
