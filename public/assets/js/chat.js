@@ -301,29 +301,15 @@ scrollToBottom(force = false) {
     const messagesList = document.getElementById('messagesList');
     if (!messagesList) return;
     
-    console.log('📜 Scrolling to bottom, force:', force);
+    // ถ้า force = true (เราส่งเอง) → scroll เสมอ
+    // ถ้า force = false และผู้ใช้กำลังเลื่อนขึ้นอ่าน → ไม่ scroll
+    if (!force && this.userIsReadingUp) return;
     
-    // ✅ วิธีที่ 1: บังคับ scroll ทันที
     messagesList.scrollTop = messagesList.scrollHeight;
     
-    // ✅ วิธีที่ 2: ใช้ scrollTo (สำรอง)
     requestAnimationFrame(() => {
-        messagesList.scrollTo({
-            top: messagesList.scrollHeight,
-            behavior: force ? 'auto' : 'smooth'
-        });
+        messagesList.scrollTop = messagesList.scrollHeight;
     });
-    
-    // ✅ วิธีที่ 3: Scroll อีกครั้งหลัง DOM update
-    setTimeout(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-        console.log('✅ Scrolled to:', messagesList.scrollTop, '/', messagesList.scrollHeight);
-    }, 100);
-    
-    // ✅ วิธีที่ 4: Scroll อีกครั้งหลัง animation
-    setTimeout(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-    }, 300);
 }
     // เพิ่มฟังก์ชันนี้ใน class EnhancedChatApp
 openReportPage(summaryText) {
@@ -899,39 +885,25 @@ setupScrollBehavior() {
     const messagesList = document.getElementById('messagesList');
     if (!messagesList) return;
     
-    console.log('📜 Setting up scroll behavior...');
-    
-    // ✅ ตั้งค่า scroll แบบ auto (ไม่ใช้ smooth เพราะช้า)
     messagesList.style.scrollBehavior = 'auto';
     messagesList.style.overflowY = 'scroll';
     
-    // ✅ เพิ่ม scroll indicator (optional - แสดงว่ามีข้อความใหม่ข้างล่าง)
-    let isUserScrolling = false;
-    let scrollTimeout = null;
+    // ✅ flag ว่าผู้ใช้กำลังเลื่อนขึ้นอ่านอยู่
+    this.userIsReadingUp = false;
     
     messagesList.addEventListener('scroll', () => {
-        clearTimeout(scrollTimeout);
+        const distanceFromBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight;
         
-        const isAtBottom = this.isAtBottom(messagesList, 50);
+        // ถ้าห่างจากล่างเกิน 150px = กำลังเลื่อนขึ้นอ่าน
+        this.userIsReadingUp = distanceFromBottom > 150;
         
-        if (!isAtBottom) {
-            isUserScrolling = true;
-        } else {
-            isUserScrolling = false;
+        // ถ้า scroll กลับลงมาล่างสุดแล้ว → ซ่อน badge และ reset flag
+        if (distanceFromBottom < 10) {
+            this.userIsReadingUp = false;
+            const badge = document.getElementById('newMsgBadge');
+            if (badge) badge.remove();
         }
-        
-        // ✅ ถ้าไม่ scroll เอง ให้กลับไปล่างสุดอัตโนมัติหลัง 2 วินาที
-        scrollTimeout = setTimeout(() => {
-            if (!isAtBottom) {
-                console.log('⬇️ Auto-scrolling to bottom after user stopped scrolling');
-                this.scrollToBottom(true);
-            }
-            isUserScrolling = false;
-        }, 2000);
     });
-    
-    // ✅ จัดเก็บ state
-    this.isUserScrolling = false;
     
     console.log('✅ Scroll behavior setup complete');
 }
@@ -2030,27 +2002,51 @@ addOptimisticMessage(message) {
     // เพิ่มลงใน list
     messagesList.appendChild(messageElement);
     
-    // ✅ Scroll ทันที (5 ครั้ง เพื่อความแน่ใจ)
-    messagesList.scrollTop = messagesList.scrollHeight;
-    
-    requestAnimationFrame(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-    });
-    
-    setTimeout(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-    }, 10);
-    
-    setTimeout(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-    }, 50);
-    
-    setTimeout(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-        console.log('✅ Final scroll position:', messagesList.scrollTop, '/', messagesList.scrollHeight);
-    }, 100);
+    const isMyMessage = message.sender_id === this.currentUser?.user_id;
+        
+        if (isMyMessage) {
+            // ข้อความของเรา → scroll ลงเสมอ
+            this.scrollToBottom(true);
+        } else if (this.userIsReadingUp) {
+            // คนอื่นส่งมา + เรากำลังเลื่อนขึ้นอ่านอยู่ → แสดง badge แทน
+            this.showNewMessageBadge(message.full_name);
+        } else {
+            // คนอื่นส่งมา + เราอยู่ล่างสุดอยู่แล้ว → scroll ลงปกติ
+            this.scrollToBottom(false);
+        }
 }
-
+showNewMessageBadge(senderName = '') {
+    // ถ้ามี badge อยู่แล้วให้อัปเดตข้อความแทน
+    let badge = document.getElementById('newMsgBadge');
+    
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'newMsgBadge';
+        badge.style.cssText = `
+            position: absolute; bottom: 80px; left: 50%;
+            transform: translateX(-50%);
+            background: #667eea; color: white;
+            padding: 8px 18px; border-radius: 20px;
+            cursor: pointer; font-size: 13px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            z-index: 100; white-space: nowrap;
+            font-family: 'Prompt', sans-serif;
+        `;
+        badge.onclick = () => {
+            this.userIsReadingUp = false;
+            this.scrollToBottom(true);
+            badge.remove();
+        };
+        
+        const messagesList = document.getElementById('messagesList');
+        if (messagesList) {
+            messagesList.parentElement.style.position = 'relative';
+            messagesList.parentElement.appendChild(badge);
+        }
+    }
+    
+    badge.innerHTML = `⬇ ${senderName ? senderName + ' ส่งข้อความใหม่' : 'มีข้อความใหม่'}`;
+}
 replaceTempMessage(tempId, realMessage) {
     const tempElement = document.querySelector(`[data-message-id="${tempId}"]`);
     if (tempElement) {
