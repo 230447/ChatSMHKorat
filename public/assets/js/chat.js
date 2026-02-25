@@ -1515,9 +1515,9 @@ createMessageElement(message) {
             </div>
         `;
     } else if (message.file_url) {
-        const isImage = message.file_url.match(/\.(jpeg|jpg|png|gif|webp)$/i) || 
-                       message.message_type === 'image' ||
-                       (message.file_name && message.file_name.match(/\.(jpeg|jpg|png|gif|webp)$/i));
+       const isImage = message.message_type === 'image' || 
+               (message.file_name && message.file_name.match(/\.(jpeg|jpg|png|gif|webp)$/i)) ||
+               (message.file_url && message.file_url.includes('cloudinary.com') && message.file_url.includes('/image/upload/'));
         
         // ✅ Decode ชื่อไฟล์อีกครั้งเพื่อความแน่ใจ
         const displayName = message.file_name || 'ไฟล์';
@@ -1546,18 +1546,20 @@ createMessageElement(message) {
             else if (displayName.match(/\.(mp3|wav|ogg)$/i)) icon = 'fa-file-audio';
             else if (displayName.match(/\.(mp4|avi|mov)$/i)) icon = 'fa-file-video';
             
+           const fileHref = (message.file_url && message.file_url.includes('cloudinary.com'))
+                ? message.file_url.replace('/upload/', '/upload/fl_attachment/')
+                : message.file_url;
+
             content = `
                 <div class="file-message">
-                    <i class="fas ${icon}" style="font-size: 32px; color: #3498db; margin-bottom: 8px;"></i>
-                    <a href="${message.file_url}" 
-                       target="_blank" 
-                       class="file-link"
-                       download="${displayName}">
+                    <i class="fas ${icon}" ...></i>
+                    <a href="${fileHref}" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="file-link">
                         📎 ${displayName}
                     </a>
-                    <span class="file-size" style="font-size: 11px; color: #95a5a6; margin-left: 8px;">
-                        ${fileSize}
-                    </span>
+                    ...
                 </div>
             `;
         }

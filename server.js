@@ -209,9 +209,10 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
+        const isImage = file.mimetype && file.mimetype.startsWith('image/');
         return {
             folder: 'smh-hospital-chat',
-            resource_type: 'auto',
+            resource_type: isImage ? 'image' : 'raw',  // raw = PDF/doc/zip จะไม่ถูก convert
             public_id: `${Date.now()}-${Math.round(Math.random() * 1e9)}`
         };
     }
@@ -903,22 +904,25 @@ app.post('/api/chat-rooms/:roomId/messages', authenticateToken, upload.single('f
         let file_name = null;
         let file_size = null;
 
+      let message_type_actual;  
+
         if (req.file) {
-            file_url = req.file.path;      // URL จาก Cloudinary เช่น https://res.cloudinary.com/...
+            file_url = req.file.path;
             file_name = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
             file_size = req.file.size || req.file.bytes || 0;
             
-            console.log('📎 File uploaded:');
-            console.log('  - Original:', req.file.originalname);
-            console.log('  - Decoded:', file_name);
-            console.log('  - Size:', file_size);
-            console.log('  - URL:', file_url);
+            if (req.file.mimetype && req.file.mimetype.startsWith('image/')) {
+                message_type_actual = 'image';
+            } else {
+                message_type_actual = 'file';
+            }
+        } else {
+            message_type_actual = message_type;
         }
-
         const messageResult = await client.query(
             `INSERT INTO messages (room_id, sender_id, message_text, message_type, file_url, file_name, file_size) 
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING message_id`,
-            [roomId, req.user.user_id, message_text, message_type, file_url, file_name, file_size]
+           [roomId, req.user.user_id, message_text, message_type_actual || message_type, file_url, file_name, file_size]
         );
 
         const messageId = messageResult.rows[0].message_id;
