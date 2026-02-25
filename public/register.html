@@ -332,139 +332,168 @@
             console.log('Loaded ' + backupDepartments.length + ' departments from backup');
         }
         
-        // Form validation
-        function validateForm() {
-            let isValid = true;
-            clearErrors();
-            
-            const employeeId = document.getElementById('employee_id').value.trim();
-            const username = document.getElementById('username').value.trim();
-            const fullName = document.getElementById('full_name').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const departmentId = document.getElementById('department_id').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm_password').value;
-            const acceptTerms = document.getElementById('acceptTerms').checked;
-            
-            // Validate employee ID
-            if (!employeeId) {
-                showError('employeeIdError', 'กรุณากรอกรหัสพนักงาน');
-                isValid = false;
-            } else if (!/^[A-Za-z0-9]+$/.test(employeeId)) {
-                showError('employeeIdError', 'รหัสพนักงานต้องเป็นตัวอักษรและตัวเลขเท่านั้น');
-                isValid = false;
-            }
-            
-            // Validate username
-            if (!username) {
-                showError('usernameError', 'กรุณากรอกชื่อผู้ใช้');
-                isValid = false;
-            } else if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
-                showError('usernameError', 'ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษเท่านั้น');
-                isValid = false;
-            }
-            
-            // Validate full name
-            if (!fullName) {
-                showError('fullNameError', 'กรุณากรอกชื่อ-นามสกุล');
-                isValid = false;
-            }
-            
-            // Validate email
-            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                showError('emailError', 'รูปแบบอีเมลไม่ถูกต้อง');
-                isValid = false;
-            }
-            
-            // Validate department
-            if (!departmentId) {
-                showError('departmentError', 'กรุณาเลือกแผนก');
-                isValid = false;
-            }
-            
-            // Validate password
-            if (!password) {
-                showError('passwordError', 'กรุณากรอกรหัสผ่าน');
-                isValid = false;
-            } else if (password.length < 6) {
-                showError('passwordError', 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
-                isValid = false;
-            }
-            
-            // Validate confirm password
-            if (!confirmPassword) {
-                showError('confirmPasswordError', 'กรุณายืนยันรหัสผ่าน');
-                isValid = false;
-            } else if (password !== confirmPassword) {
-                showError('confirmPasswordError', 'รหัสผ่านไม่ตรงกัน');
-                isValid = false;
-            }
-            
-            // Validate terms
-            if (!acceptTerms) {
-                showError('termsError', 'กรุณายอมรับข้อกำหนดและเงื่อนไข');
-                isValid = false;
-            }
-            
-            return isValid;
-        }
-        
-        // Form submission
-        document.getElementById('registerForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            if (!validateForm()) {
-                return;
-            }
-            
-            const formData = {
-                employee_id: document.getElementById('employee_id').value.trim(),
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value,
-                full_name: document.getElementById('full_name').value.trim(),
-                email: document.getElementById('email').value.trim() || null,
-                department_id: parseInt(document.getElementById('department_id').value)
-            };
-            
-            // Show loading
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Save token and user data
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    // Show success message
-                    alert('ลงทะเบียนสำเร็จ! กำลังเปลี่ยนเส้นทาง...');
-                    
-                    // Redirect to chat
-                    window.location.href = '/chat';
-                } else {
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                    // Show appropriate error
-                    if (data.error.includes('รหัสพนักงาน') || data.error.includes('ชื่อผู้ใช้')) {
-                        showError('employeeIdError', data.error);
-                    } else {
-                        showError('employeeIdError', 'เกิดข้อผิดพลาดในการลงทะเบียน: ' + data.error);
-                    }
-                }
-            } catch (error) {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                showError('employeeIdError', 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-                console.error('Registration error:', error);
-            }
+      // Form validation
+function validateForm() {
+    let isValid = true;
+    clearErrors();
+    
+    const employeeId = document.getElementById('employee_id').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const fullName = document.getElementById('full_name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const departmentId = document.getElementById('department_id').value;
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm_password').value;
+    const acceptTerms = document.getElementById('acceptTerms').checked;
+    
+    // Validate employee ID
+    if (!employeeId) {
+        showError('employeeIdError', 'กรุณากรอกรหัสพนักงาน');
+        isValid = false;
+    } else if (!/^[A-Za-z0-9]+$/.test(employeeId)) {
+        showError('employeeIdError', 'รหัสพนักงานต้องเป็นตัวอักษรและตัวเลขเท่านั้น');
+        isValid = false;
+    }
+    
+    // Validate username
+    if (!username) {
+        showError('usernameError', 'กรุณากรอกชื่อผู้ใช้');
+        isValid = false;
+    } else if (!/^[a-zA-Z0-9_.]+$/.test(username)) {
+        showError('usernameError', 'ชื่อผู้ใช้ต้องเป็นภาษาอังกฤษ ตัวเลข และ _ เท่านั้น');
+        isValid = false;
+    } else if (username.length < 1) {
+        showError('usernameError', 'ชื่อผู้ใช้ต้องมีอย่างน้อย 1 ตัวอักษร');
+        isValid = false;
+    }
+    
+    // Validate full name
+    if (!fullName) {
+        showError('fullNameError', 'กรุณากรอกชื่อ-นามสกุล');
+        isValid = false;
+    }
+    
+    // Validate email
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError('emailError', 'รูปแบบอีเมลไม่ถูกต้อง');
+        isValid = false;
+    }
+    
+    // Validate department
+    if (!departmentId) {
+        showError('departmentError', 'กรุณาเลือกแผนก');
+        isValid = false;
+    }
+    
+    // Validate password
+    if (!password) {
+        showError('passwordError', 'กรุณากรอกรหัสผ่าน');
+        isValid = false;
+    } else if (password.length < 6) {
+        showError('passwordError', 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+        isValid = false;
+    }
+    
+    // Validate confirm password
+    if (!confirmPassword) {
+        showError('confirmPasswordError', 'กรุณายืนยันรหัสผ่าน');
+        isValid = false;
+    } else if (password !== confirmPassword) {
+        showError('confirmPasswordError', 'รหัสผ่านไม่ตรงกัน');
+        isValid = false;
+    }
+    
+    // Validate terms
+    if (!acceptTerms) {
+        showError('termsError', 'กรุณายอมรับข้อกำหนดและเงื่อนไข');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+        // ✅ เพิ่ม event listeners สำหรับ real-time validation
+document.getElementById('employee_id').addEventListener('input', function() {
+    clearFieldError('employeeIdError');
+});
+
+document.getElementById('username').addEventListener('input', function() {
+    clearFieldError('usernameError');
+});
+
+// ฟังก์ชันล้าง error เฉพาะฟิลด์
+function clearFieldError(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = '';
+        element.style.display = 'none';
+    }
+}
+   // Form submission
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+        return;
+    }
+    
+    const formData = {
+        employee_id: document.getElementById('employee_id').value.trim(),
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+        full_name: document.getElementById('full_name').value.trim(),
+        email: document.getElementById('email').value.trim() || null,
+        department_id: parseInt(document.getElementById('department_id').value)
+    };
+    
+    // Show loading
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    try {
+        const response = await fetch('/api/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
         });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Save token and user data
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            // Show success message
+            alert('ลงทะเบียนสำเร็จ! กำลังเปลี่ยนเส้นทาง...');
+            
+            // Redirect to chat
+            window.location.href = '/chat';
+        } else {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            
+            // ✅ ตรวจสอบประเภท error และแสดงที่ฟิลด์ที่ถูกต้อง
+            const errorMsg = data.error || 'เกิดข้อผิดพลาดในการลงทะเบียน';
+            
+            if (errorMsg.includes('รหัสพนักงาน') || errorMsg.includes('employee_id')) {
+                // error เกี่ยวกับรหัสพนักงาน
+                showError('employeeIdError', errorMsg);
+                document.getElementById('employee_id').focus();
+            } else if (errorMsg.includes('ชื่อผู้ใช้') || errorMsg.includes('username')) {
+                // error เกี่ยวกับชื่อผู้ใช้
+                showError('usernameError', errorMsg);
+                document.getElementById('username').focus();
+            } else {
+                // error ทั่วไป
+                showError('employeeIdError', errorMsg);
+            }
+        }
+    } catch (error) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        showError('employeeIdError', 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+        console.error('Registration error:', error);
+    }
+});
         
         function showError(elementId, message) {
             const element = document.getElementById(elementId);
