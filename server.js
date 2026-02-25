@@ -10,7 +10,8 @@ const fs = require('fs');
 const cors = require('cors');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 // ตั้งค่า Google Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -199,62 +200,26 @@ async function createSummaryTable() {
 // ========================================
 // File upload configuration
 // ========================================
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const dir = 'uploads/';
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
-        }
-        cb(null, dir);
-    },
-    filename: (req, file, cb) => {
-        // แก้ไข encoding ของชื่อไฟล์
-        let originalName = file.originalname;
-        
-        // แปลงจาก latin1 เป็น utf8 (สำหรับ browser ที่ส่ง encoding ผิด)
-        try {
-            originalName = Buffer.from(file.originalname, 'latin1').toString('utf8');
-        } catch (e) {
-            console.log('⚠️ Cannot decode filename, using original');
-        }
-        
-        const ext = path.extname(originalName);
-        const timestamp = Date.now();
-        const randomStr = Math.round(Math.random() * 1E9);
-        const uniqueName = `${timestamp}-${randomStr}${ext}`;
-        
-        console.log('📁 Original filename:', file.originalname);
-        console.log('📁 Decoded filename:', originalName);
-        console.log('📁 Saved as:', uniqueName);
-        
-        // เก็บชื่อเดิมไว้ใน file object
-        file.decodedName = originalName;
-        
-        cb(null, uniqueName);
+// ตั้งค่า Cloudinary (เพิ่มใน .env ด้วย)
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        return {
+            folder: 'smh-hospital-chat',
+            resource_type: 'auto',
+            public_id: `${Date.now()}-${Math.round(Math.random() * 1e9)}`
+        };
     }
 });
-
-const upload = multer({
+const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        // Decode filename ก่อนตรวจสอบ
-        let filename = file.originalname;
-        try {
-            filename = Buffer.from(file.originalname, 'latin1').toString('utf8');
-        } catch (e) {}
-        
-        const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt|mp3|wav|webp/;
-        const extname = allowedTypes.test(path.extname(filename).toLowerCase());
-        
-        if (extname) {
-            cb(null, true);
-        } else {
-            cb(new Error('อนุญาตเฉพาะไฟล์รูปภาพ, เอกสาร, และเสียง'));
-        }
-    }
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
-
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'smh-hospital-chat-secret-key-2024';
 
@@ -939,9 +904,9 @@ app.post('/api/chat-rooms/:roomId/messages', authenticateToken, upload.single('f
         let file_size = null;
 
         if (req.file) {
-            file_url = `/uploads/${req.file.filename}`;
+            file_url = req.file.path;      // URL จาก Cloudinary เช่น https://res.cloudinary.com/...
             file_name = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
-            file_size = req.file.size;
+            file_size = req.file.size || req.file.bytes || 0;
             
             console.log('📎 File uploaded:');
             console.log('  - Original:', req.file.originalname);
@@ -1043,7 +1008,7 @@ app.put('/api/profile', authenticateToken, upload.single('profile_image'), async
 
         if (req.file) {
             updateFields.push(`profile_image = $${paramIndex++}`);
-            values.push(`/uploads/${req.file.filename}`);
+           values.push(req.file.path);    // Cloudinary URL
         }
 
         if (updateFields.length === 0) {
