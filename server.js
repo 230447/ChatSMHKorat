@@ -557,9 +557,11 @@ function validateGeminiAPI() {
 async function generateWithGemini(prompt) {
     try {
         console.log('🤖 กำลังเรียกใช้ Gemini AI...');
+        console.log('📝 Prompt length:', prompt.length);
         
+        // ✅ ใช้ gemini-1.5-flash หรือ gemini-pro
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.5-flash",
+            model: "gemini-1.5-flash",
             generationConfig: {
                 temperature: 0.3,
                 topP: 0.8,
@@ -575,6 +577,7 @@ async function generateWithGemini(prompt) {
             { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ];
 
+        // ✅ เรียกใช้ด้วย parts array
         const result = await model.generateContent({
             contents: [{ 
                 role: "user", 
@@ -587,10 +590,23 @@ async function generateWithGemini(prompt) {
         const text = response.text();
         
         console.log('✅ Gemini สรุปสำเร็จ');
+        console.log('📄 Response length:', text.length);
+        
         return text;
         
     } catch (error) {
-        console.error('❌ Gemini API Error:', error.message);
+        console.error('❌ Gemini API Error:');
+        console.error('❌ Name:', error.name);
+        console.error('❌ Message:', error.message);
+        console.error('❌ Stack:', error.stack);
+        
+        // ถ้า error เพราะ quota หรือ model ไม่มี
+        if (error.message.includes('quota') || error.message.includes('rate limit')) {
+            console.log('⚠️ Quota exceeded, ใช้ fallback');
+        } else if (error.message.includes('not found') || error.message.includes('model')) {
+            console.log('⚠️ Model not found, ลองเปลี่ยน model name');
+        }
+        
         throw new Error(`Gemini Error: ${error.message}`);
     }
 }
@@ -1555,38 +1571,38 @@ ${custom_instruction ? `\n**คำแนะนำเพิ่มเติม:** 
 - โทนการสนทนา: [เลือก 1: ด่วน / ปกติ / เป็นทางการ / ปรึกษา]
 - ระดับความสำคัญ: [เลือก 1: 🔴 สูง / 🟡 ปานกลาง / 🟢 ทั่วไป]${custom_instruction ? `\n\n**8. 📝 หมายเหตุพิเศษ**\n${custom_instruction}` : ''}`;
 
-        // เรียกใช้ Gemini AI
-        let summary;
-        const apiKey = process.env.GEMINI_API_KEY;
+       // เรียกใช้ Gemini AI
+let summary;
+const apiKey = process.env.GEMINI_API_KEY;
 
-        if (!apiKey) {
-            console.log('⚠️ ไม่มี API Key, ใช้ fallback');
-            summary = createFallbackSummary(messages, roomName);
-        } else {
-            try {
-                console.log('🤖 เรียกใช้ Gemini AI...');
-                
-                const model = genAI.getGenerativeModel({ 
-                    model: "gemini-2.5-flash",
-                    generationConfig: {
-                        temperature: 0.3,
-                        topP: 0.8,
-                        topK: 64,
-                        maxOutputTokens: 3000,
-                    }
-                });
-
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                summary = response.text();
-                
-                console.log('✅ Gemini สรุปสำเร็จ');
-                
-            } catch (aiError) {
-                console.error('❌ Gemini Error:', aiError.message);
-                summary = createFallbackSummary(messages, roomName);
+if (!apiKey) {
+    console.log('⚠️ ไม่มี API Key, ใช้ fallback');
+    summary = createFallbackSummary(messages, roomName);
+} else {
+    try {
+        console.log('🤖 เรียกใช้ Gemini AI...');
+        
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",  // ✅ เปลี่ยนเป็น 1.5-flash
+            generationConfig: {
+                temperature: 0.3,
+                topP: 0.8,
+                topK: 64,
+                maxOutputTokens: 3000,
             }
-        }
+        });
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        summary = response.text();
+        
+        console.log('✅ Gemini สรุปสำเร็จ');
+        
+    } catch (aiError) {
+        console.error('❌ Gemini Error:', aiError.message);
+        summary = createFallbackSummary(messages, roomName);
+    }
+}
         
         // สร้าง summary_id
         const summaryId = `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
