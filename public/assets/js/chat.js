@@ -1231,8 +1231,7 @@ initTextToSpeech() {
     }
     
     roomsList.innerHTML = html;
-    
-    // เพิ่ม event listeners
+
     roomsList.querySelectorAll('.room-item').forEach(item => {
         item.addEventListener('click', () => {
             const roomId = parseInt(item.dataset.roomId);
@@ -4832,7 +4831,6 @@ displaySummary(summary, stats, summaryId = null, reportUrl = null) {
         </div>
     `;
     
-    // ✅ เพิ่ม Event Listeners สำหรับปุ่มใน modal footer
     this.setupSummaryModalButtons(summaryId, stats.room_id, summary, reportUrl);
     // ⬆️ จบฟังก์ชัน displaySummary ที่นี่ ⬆️
 }
