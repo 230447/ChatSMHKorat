@@ -756,7 +756,45 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         const firstMsg = sortedMessages[0], lastMsg = sortedMessages[sortedMessages.length - 1];
         const actualTimeframe = `${firstMsg.date} ${firstMsg.time} - ${lastMsg.date} ${lastMsg.time}`;
 
-        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสาร\n\n**ข้อมูลห้อง:** ${roomName} (${messages.length} ข้อความ ช่วง ${actualTimeframe})\n\n**การสนทนา:**\n${formattedMessages}\n\n${custom_instruction ? `**คำแนะนำ:** ${custom_instruction}\n\n` : ''}สรุปตามโครงสร้าง:\n**1. 📋 สรุปภาพรวม**\n**2. 🎯 ประเด็นสำคัญ**\n**3. 📅 นัดหมาย**\n**4. ✅ Action Items**\n**5. ⚠️ ประเด็นค้างอยู่**\n**6. 💊 ข้อมูลทางการแพทย์**\n**7. 📊 สถิติ** (ผู้เข้าร่วม, ช่วงเวลา, จำนวน, โทน, ระดับความสำคัญ)`;
+        // วันที่/เวลาภาษาไทย พุทธศักราช
+        const _now = new Date();
+        const _buddhistYear = _now.getFullYear() + 543;
+        const _thaiDate = new Intl.DateTimeFormat('th-TH', {
+            year: 'numeric', month: 'long', day: 'numeric',
+            timeZone: 'Asia/Bangkok'
+        }).format(_now).replace(_now.getFullYear().toString(), _buddhistYear.toString());
+        const _thaiTime = new Intl.DateTimeFormat('th-TH', {
+            hour: '2-digit', minute: '2-digit',
+            timeZone: 'Asia/Bangkok'
+        }).format(_now);
+
+        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล
+
+**ข้อมูลห้อง:** ${roomName} (${messages.length} ข้อความ ช่วง ${actualTimeframe})
+**วันที่/เวลาที่สรุป:** ${_thaiDate} เวลา ${_thaiTime} น.
+
+**การสนทนา:**
+${formattedMessages}
+
+${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}สรุปการสนทนาเฉพาะ 3 ส่วนต่อไปนี้เท่านั้น ห้ามเพิ่มหัวข้ออื่น:
+
+**1. 📋 สรุปภาพรวม**
+เขียนสรุปเรื่องที่คุยกันโดยรวม 2-3 ประโยค กระชับ ชัดเจน ใช้ภาษาเป็นทางการ
+
+**2. 🎯 ประเด็นสำคัญ**
+- [ประเด็นที่ 1]
+- [ประเด็นที่ 2]
+(สรุปเนื้อหาสำคัญเป็นข้อๆ ไม่เกิน 7 ข้อ)
+
+**3. ✅ สิ่งที่ต้องทำ (Action Items)**
+| เรื่อง | ผู้รับผิดชอบ | กำหนดแล้วเสร็จ | สถานะ |
+|-------|-------------|----------------|--------|
+| [งาน] | [ชื่อหรือตำแหน่ง] | [วันที่ หรือ ไม่ระบุ] | [⏳ กำลังดำเนินการ / ✅ เสร็จแล้ว / 🔴 ด่วน / 🔵 รอดำเนินการ] |
+
+ถ้าไม่มี Action Items ให้เขียนว่า: ไม่มีงานที่ต้องดำเนินการเพิ่มเติม
+
+---
+📅 สรุปโดย AI เมื่อ: ${_thaiDate} เวลา ${_thaiTime} น.`;
 
         let summary;
         const apiKey = process.env.GEMINI_API_KEY;

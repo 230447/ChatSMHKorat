@@ -3,530 +3,623 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายงานสรุปการสนทนาโดย AI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>รายงานสรุปการสนทนา - โรงพยาบาลเซนต์เมรี่</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/assets/css/responsive.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        * { font-family: 'Sarabun', 'Kanit', sans-serif; }
+        :root {
+            --blue-dark:   #1a3a5c;
+            --blue-mid:    #1e5799;
+            --blue-light:  #2980b9;
+            --accent:      #e8a020;
+            --accent-soft: #fef3dc;
+            --green:       #27ae60;
+            --green-soft:  #eafaf1;
+            --red:         #c0392b;
+            --red-soft:    #fdf0f0;
+            --gray-100:    #f8f9fa;
+            --gray-200:    #e9ecef;
+            --gray-400:    #adb5bd;
+            --gray-600:    #6c757d;
+            --gray-800:    #343a40;
+            --text:        #1a2533;
+            --radius:      8px;
+            --shadow:      0 2px 12px rgba(26,58,92,0.10);
+        }
 
-        body { background-color: #f8f9fa; color: #333; padding: 20px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .report-container {
-            max-width: 210mm;
-            min-height: 297mm;
+        body {
+            background: #dce5ef;
+            font-family: 'Sarabun', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px 16px 80px;
+        }
+
+        /* ─── Floating toolbar ─── */
+        .toolbar {
+            position: fixed;
+            top: 18px; right: 20px;
+            display: flex; gap: 10px;
+            z-index: 999;
+        }
+        .toolbar button {
+            padding: 9px 18px;
+            border: none; border-radius: 20px;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 7px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+            transition: all .25s;
+        }
+        .toolbar button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.22); }
+        .btn-print { background: var(--blue-mid); color: white; }
+        .btn-pdf   { background: var(--green);    color: white; }
+        .btn-back  { background: white; color: var(--gray-800); }
+
+        /* ─── A4 Paper ─── */
+        .paper {
+            max-width: 800px;
             margin: 0 auto;
             background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 25mm;
+            border-radius: 4px;
+            box-shadow: 0 4px 32px rgba(26,58,92,0.18);
+            overflow: hidden;
+        }
+
+        /* ─── Header Band ─── */
+        .header-band {
+            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 60%, var(--blue-light) 100%);
+            padding: 28px 36px 22px;
             position: relative;
+            overflow: hidden;
         }
-
-        @media print {
-            body { background: white; padding: 0; }
-            .report-container { box-shadow: none; padding: 15mm; margin: 0; max-width: 100%; }
-            .no-print { display: none !important; }
-            .page-break { page-break-before: always; }
+        .header-band::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, var(--accent) 0%, #f5d27a 50%, var(--accent) 100%);
         }
-
-        .header { border-bottom: 3px solid #0d6efd; padding-bottom: 20px; margin-bottom: 30px; }
-        .hospital-name { color: #0d6efd; font-weight: 700; font-size: 24px; }
-        .report-title { font-size: 28px; font-weight: 700; color: #2c3e50; text-align: center; margin: 15px 0; }
-
-        .metadata-box {
-            background: #f8f9fa;
-            border-left: 4px solid #0d6efd;
-            padding: 15px;
-            margin-bottom: 25px;
-            border-radius: 0 8px 8px 0;
+        .header-band::before {
+            content: '';
+            position: absolute; top: -60px; right: -60px;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
         }
+        .header-top {
+            display: flex; align-items: center; gap: 18px;
+            margin-bottom: 18px;
+        }
+        .logo-circle {
+            width: 54px; height: 54px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.35);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 800; color: white;
+            flex-shrink: 0;
+            letter-spacing: -1px;
+        }
+        .hospital-info h1 {
+            font-size: 18px; font-weight: 700; color: white;
+            line-height: 1.3;
+        }
+        .hospital-info p {
+            font-size: 12px; color: rgba(255,255,255,0.72); margin-top: 2px;
+        }
+        .doc-title {
+            font-size: 22px; font-weight: 800; color: white;
+            text-align: center; letter-spacing: .5px;
+            margin-bottom: 16px;
+        }
+        .doc-title span {
+            background: rgba(232,160,32,0.25);
+            border: 1px solid rgba(232,160,32,0.5);
+            border-radius: 4px; padding: 2px 10px;
+            font-size: 12px; font-weight: 600;
+            color: #fde68a; vertical-align: middle;
+            margin-left: 8px; letter-spacing: 0;
+        }
+        .meta-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+        }
+        .meta-item {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .meta-item i { color: rgba(255,255,255,0.55); font-size: 12px; width: 14px; }
+        .meta-label { font-size: 11px; color: rgba(255,255,255,0.55); }
+        .meta-value { font-size: 13px; color: white; font-weight: 600; }
 
-        .section-title {
-            color: #0d6efd;
-            font-weight: 600;
-            margin-top: 25px;
+        /* ─── Body ─── */
+        .body-wrap { padding: 30px 36px 20px; }
+
+        /* ─── Section ─── */
+        .section { margin-bottom: 28px; }
+        .section-head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 14px;
             padding-bottom: 8px;
-            border-bottom: 2px solid #e9ecef;
+            border-bottom: 2px solid var(--gray-200);
         }
-
-        /* ✅ แก้หลัก: summary-content ต้อง render HTML ได้ */
-        .summary-content {
-            line-height: 1.9;
-            font-size: 15px;
-            background: #f8fafc;
-            padding: 20px 25px;
+        .section-head .icon-badge {
+            width: 32px; height: 32px;
             border-radius: 8px;
-            border: 1px solid #e9ecef;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; flex-shrink: 0;
         }
+        .section-head h2 {
+            font-size: 15px; font-weight: 700; color: var(--blue-dark);
+        }
+        .badge-blue { background: #dbeafe; }
+        .badge-purple { background: #ede9fe; }
+        .badge-orange { background: #fff7ed; }
 
-        /* ✅ style สำหรับ markdown ที่แปลงแล้ว */
-        .summary-content p { margin-bottom: 8px; }
-        .summary-content strong { font-weight: 700; color: #1a252f; }
-        .summary-content ul { margin: 6px 0 10px 20px; padding: 0; }
-        .summary-content ul li { margin-bottom: 5px; list-style-type: disc; }
-        .summary-content hr { border: none; border-top: 1px solid #dee2e6; margin: 14px 0; }
+        /* ─── Executive Summary card ─── */
+        .exec-card {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+            border: 1px solid #bee3f8;
+            border-left: 4px solid var(--blue-mid);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            font-size: 14px; line-height: 1.8;
+            color: var(--text);
+        }
+        .exec-card p { margin-bottom: 6px; }
+        .exec-card p:last-child { margin-bottom: 0; }
 
-        .summary-section-block {
-            margin: 14px 0;
-            padding: 12px 16px;
+        /* ─── Key points ─── */
+        .key-list { list-style: none; }
+        .key-list li {
+            display: flex; gap: 10px;
+            padding: 9px 12px;
             border-radius: 6px;
-            border-left: 4px solid #0d6efd;
-            background: white;
+            font-size: 13.5px; line-height: 1.6;
+            margin-bottom: 4px;
+            transition: background .2s;
         }
-        .summary-section-block h3 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0d6efd;
-            margin: 0 0 8px 0;
+        .key-list li:nth-child(odd)  { background: var(--gray-100); }
+        .key-list li:nth-child(even) { background: white; }
+        .key-list li .bullet {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: var(--blue-mid); color: white;
+            font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; margin-top: 2px;
         }
 
-        .keywords-container { display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
-
-        .keyword-badge {
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        /* ─── Action Items Table ─── */
+        .action-table {
+            width: 100%; border-collapse: collapse; font-size: 13px;
         }
+        .action-table thead tr {
+            background: var(--blue-dark); color: white;
+        }
+        .action-table thead th {
+            padding: 10px 12px; text-align: left; font-weight: 600;
+            font-size: 12.5px;
+        }
+        .action-table thead th:first-child { border-radius: 6px 0 0 0; }
+        .action-table thead th:last-child  { border-radius: 0 6px 0 0; }
+        .action-table tbody tr { border-bottom: 1px solid var(--gray-200); }
+        .action-table tbody tr:last-child { border-bottom: none; }
+        .action-table tbody tr:hover { background: var(--gray-100); }
+        .action-table tbody td { padding: 9px 12px; vertical-align: top; line-height: 1.5; }
+        .action-table tbody td:first-child { font-weight: 500; }
 
         .status-badge {
-            padding: 14px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 15px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            margin: 10px 0;
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 9px; border-radius: 20px;
+            font-size: 11.5px; font-weight: 600; white-space: nowrap;
         }
-        .status-completed { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .status-pending   { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
-        .status-followup  { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .status-pending  { background: #fff3cd; color: #856404; }
+        .status-done     { background: #d1fae5; color: #065f46; }
+        .status-urgent   { background: #fee2e2; color: #991b1b; }
+        .status-waiting  { background: #e0e7ff; color: #3730a3; }
 
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px dashed #dee2e6;
-            text-align: center;
-            color: #6c757d;
-            font-size: 14px;
+        .no-action {
+            text-align: center; padding: 20px;
+            color: var(--gray-600); font-size: 13px;
+            background: var(--gray-100); border-radius: var(--radius);
         }
 
-        .action-buttons {
-            position: fixed;
-            bottom: 20px; right: 20px;
-            display: flex; gap: 10px;
-            z-index: 1000;
+        /* ─── Loading / Error ─── */
+        .state-box {
+            text-align: center; padding: 48px 20px; color: var(--gray-600);
+        }
+        .state-box i { font-size: 40px; margin-bottom: 14px; display: block; }
+        .state-box p  { font-size: 14px; }
+
+        /* ─── Footer ─── */
+        .footer-band {
+            background: var(--gray-100);
+            border-top: 2px solid var(--gray-200);
+            padding: 16px 36px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 8px;
+        }
+        .footer-left { font-size: 12px; color: var(--gray-600); }
+        .footer-left strong { color: var(--blue-dark); }
+        .footer-right { font-size: 11px; color: var(--gray-400); font-style: italic; }
+
+        /* ─── Print ─── */
+        @media print {
+            body { background: white; padding: 0; }
+            .toolbar { display: none !important; }
+            .paper { box-shadow: none; border-radius: 0; max-width: 100%; }
         }
 
-        .btn-report {
-            padding: 12px 25px;
-            font-weight: 600;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        /* ─── Responsive ─── */
+        @media (max-width: 600px) {
+            .body-wrap { padding: 20px 18px; }
+            .header-band { padding: 20px 18px 16px; }
+            .meta-grid { grid-template-columns: 1fr; }
+            .toolbar { top: 10px; right: 10px; }
+            .toolbar button { padding: 8px 12px; font-size: 12px; }
         }
 
-        .logo {
-            width: 60px; height: 60px;
-            background: #0d6efd;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: bold;
-            margin-right: 15px;
-            flex-shrink: 0;
-        }
-
-        .print-watermark {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80px;
-            color: rgba(0,0,0,0.04);
-            font-weight: bold;
-            z-index: 0;
-            white-space: nowrap;
-            pointer-events: none;
-        }
-
-        /* ✅ loading spinner */
-        .loading-state {
-            text-align: center;
-            padding: 30px;
-            color: #6c757d;
-        }
-
-        @media (max-width: 768px) {
-            .report-container { padding: 15px; min-height: unset; }
-            .action-buttons { flex-direction: column; bottom: 10px; right: 10px; }
-        }
+        /* ─── Spinner ─── */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
     </style>
 </head>
 <body>
-    <div class="print-watermark">รายงานสรุปการสนทนา</div>
 
-    <div class="report-container" id="report-content">
+<!-- Toolbar -->
+<div class="toolbar no-print">
+    <button class="btn-back" onclick="history.length>1?history.back():(location.href='/chat')">
+        <i class="fas fa-arrow-left"></i> กลับ
+    </button>
+    <button class="btn-print" onclick="window.print()">
+        <i class="fas fa-print"></i> พิมพ์
+    </button>
+    <button class="btn-pdf" id="btnPDF">
+        <i class="fas fa-file-pdf"></i> PDF
+    </button>
+</div>
 
-        <!-- ส่วนหัว -->
-        <div class="header">
-            <div class="d-flex align-items-center mb-3">
-                <div class="logo">SMH</div>
+<!-- A4 Paper -->
+<div class="paper" id="reportContent">
+
+    <!-- ── Header ── -->
+    <div class="header-band">
+        <div class="header-top">
+            <div class="logo-circle">SMH</div>
+            <div class="hospital-info">
+                <h1>โรงพยาบาลเซนต์เมรี่ นครราชสีมา</h1>
+                <p>Saint Mary's Hospital · Nakhon Ratchasima</p>
+            </div>
+        </div>
+
+        <div class="doc-title">
+            รายงานสรุปการสนทนา
+            <span>AI Generated</span>
+        </div>
+
+        <div class="meta-grid">
+            <div class="meta-item">
+                <i class="fas fa-hashtag"></i>
                 <div>
-                    <div class="hospital-name">โรงพยาบาลเซนต์เมรี่</div>
-                    <div class="text-muted">Saint Mary's Hospital · Nakhon Ratchasima</div>
+                    <div class="meta-label">รหัสรายงาน</div>
+                    <div class="meta-value" id="metaId">—</div>
                 </div>
             </div>
-            <h1 class="report-title">📋 รายงานสรุปการสนทนาโดย AI</h1>
-            <div class="row">
-                <div class="col-md-6">
-                    <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                    <span id="report-date">-</span>
+            <div class="meta-item">
+                <i class="fas fa-door-open"></i>
+                <div>
+                    <div class="meta-label">ห้องสนทนา</div>
+                    <div class="meta-value" id="metaRoom">—</div>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <i class="fas fa-clock me-2 text-primary"></i>
-                    <span id="report-time">-</span>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-calendar-day"></i>
+                <div>
+                    <div class="meta-label">วันที่</div>
+                    <div class="meta-value" id="metaDate">—</div>
+                </div>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <div class="meta-label">เวลา</div>
+                    <div class="meta-value" id="metaTime">—</div>
+                </div>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-comments"></i>
+                <div>
+                    <div class="meta-label">ข้อความที่วิเคราะห์</div>
+                    <div class="meta-value" id="metaMsgCount">—</div>
+                </div>
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-calendar-alt"></i>
+                <div>
+                    <div class="meta-label">ช่วงเวลา</div>
+                    <div class="meta-value" id="metaRange">—</div>
                 </div>
             </div>
         </div>
-
-        <!-- metadata -->
-        <h4 class="section-title"><i class="fas fa-info-circle me-2"></i>ข้อมูลอ้างอิงรายงาน</h4>
-        <div class="metadata-box">
-            <div class="row">
-                <div class="col-md-6 mb-2">
-                    <small class="text-muted">รหัสรายงาน</small>
-                    <div class="fw-bold text-primary" id="report-id">-</div>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <small class="text-muted">ห้องสนทนา</small>
-                    <div class="fw-bold" id="room-name">-</div>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <small class="text-muted">ช่วงวันที่</small>
-                    <div id="chat-date-range">-</div>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <small class="text-muted">จำนวนข้อความที่วิเคราะห์</small>
-                    <div id="message-count">-</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- summary -->
-        <h4 class="section-title"><i class="fas fa-brain me-2"></i>สรุปการสนทนาโดย AI</h4>
-        <div class="summary-content" id="summary-content">
-            <div class="loading-state">
-                <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block text-primary"></i>
-                กำลังโหลดข้อมูลสรุป...
-            </div>
-        </div>
-
-        <!-- keywords -->
-        <h4 class="section-title"><i class="fas fa-tags me-2"></i>คำสำคัญที่ปรากฏในการสนทนา</h4>
-        <div id="keywords-container" class="keywords-container">
-            <span class="text-muted small">กำลังวิเคราะห์...</span>
-        </div>
-
-        <!-- status -->
-        <h4 class="section-title"><i class="fas fa-clipboard-check me-2"></i>สถานะการดำเนินการ</h4>
-        <div id="status-container">
-            <span class="text-muted small">กำลังวิเคราะห์...</span>
-        </div>
-
-        <!-- footer -->
-        <div class="footer mt-5">
-            <div class="mb-1">
-                <i class="fas fa-robot me-1"></i>
-                รายงานนี้จัดทำโดยระบบสรุปการสนทนาด้วย AI (Gemini) อัตโนมัติ
-            </div>
-            <div id="generated-time" class="mb-1">-</div>
-            <div class="text-muted small">
-                เอกสารนี้ใช้เป็นข้อมูลอ้างอิงภายในโรงพยาบาลเท่านั้น ไม่ใช่เอกสารทางกฎหมาย
-            </div>
-        </div>
-
     </div>
 
-    <!-- ปุ่ม -->
-    <div class="action-buttons no-print">
-        <button id="btn-print" class="btn btn-primary btn-report">
-            <i class="fas fa-print"></i> พิมพ์
-        </button>
-        <button id="btn-pdf" class="btn btn-success btn-report">
-            <i class="fas fa-file-pdf"></i> PDF
-        </button>
-        <button id="btn-back" class="btn btn-outline-secondary btn-report">
-            <i class="fas fa-arrow-left"></i> กลับ
-        </button>
+    <!-- ── Body ── -->
+    <div class="body-wrap" id="reportBody">
+        <div class="state-box">
+            <i class="fas fa-circle-notch spin" style="color:var(--blue-mid)"></i>
+            <p>กำลังโหลดสรุป...</p>
+        </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- ── Footer ── -->
+    <div class="footer-band">
+        <div class="footer-left">
+            สร้างโดย <strong>ระบบ AI อัตโนมัติ (Gemini)</strong> · โรงพยาบาลเซนต์เมรี่ นครราชสีมา
+        </div>
+        <div class="footer-right">
+            เอกสารนี้ใช้เป็นข้อมูลอ้างอิงภายในเท่านั้น · กรุณาตรวจสอบความถูกต้องก่อนนำไปใช้
+        </div>
+    </div>
+</div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-
-        // วันที่/เวลาปัจจุบัน
-        const now = new Date();
-        const thaiDate = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-        const thaiTime = now.toLocaleTimeString('th-TH');
-        document.getElementById('report-date').textContent = thaiDate;
-        document.getElementById('report-time').textContent = thaiTime;
-        document.getElementById('generated-time').textContent = `สร้างรายงานเมื่อ: ${thaiDate} เวลา ${thaiTime}`;
-
-        // URL params
-        const params  = new URLSearchParams(window.location.search);
-        const summaryId = params.get('id') || '';
-        const roomId    = params.get('room_id') || '';
-        document.getElementById('report-id').textContent = summaryId || 'ไม่ระบุ';
-
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (!token) {
-            alert('กรุณาเข้าสู่ระบบก่อน');
-            window.location.href = '/login';
-            return;
-        }
-
-        // ดึงข้อมูลจาก API
-        if (summaryId) {
-            fetch(`/api/chat-summary/details?id=${summaryId}&room_id=${roomId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    renderReport(data);
-                } else {
-                    showError('ไม่พบข้อมูลสรุปนี้ในระบบ: ' + (data.error || ''));
-                }
-            })
-            .catch(err => {
-                console.error('Fetch error:', err);
-                showError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
-            });
-        } else {
-            showError('ไม่มีรหัสสรุป กรุณาสร้างสรุปจากหน้าแชทก่อน');
-        }
-
-        // ปุ่ม
-        document.getElementById('btn-print').addEventListener('click', () => window.print());
-        document.getElementById('btn-pdf').addEventListener('click', generatePDF);
-        document.getElementById('btn-back').addEventListener('click', () => {
-            history.length > 1 ? history.back() : (window.location.href = '/chat');
-        });
+<script>
+/* ════════════════════════════════════════════
+   Helper: Thai Buddhist Date
+════════════════════════════════════════════ */
+function thaiNow() {
+    const now = new Date();
+    const buddhistYear = now.getFullYear() + 543;
+    const date = now.toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'Asia/Bangkok'
+    }).replace(now.getFullYear().toString(), buddhistYear.toString());
+    const time = now.toLocaleTimeString('th-TH', {
+        hour: '2-digit', minute: '2-digit',
+        timeZone: 'Asia/Bangkok'
     });
+    return { date, time };
+}
 
-    /* ============================================================
-       ✅ MAIN: render ข้อมูลจริงจาก API
-    ============================================================ */
-    function renderReport(data) {
-        document.getElementById('room-name').textContent      = data.room_name    || 'ไม่ระบุ';
-        document.getElementById('chat-date-range').textContent = data.date_range  || 'ไม่ระบุ';
-        document.getElementById('message-count').textContent  = data.message_count
-            ? `${data.message_count} ข้อความ`
-            : 'ไม่ระบุ';
+function formatReportId(raw) {
+    if (!raw) return '—';
+    // ย่อ summary_id ให้อ่านง่าย
+    const ts = raw.replace(/\D/g, '').slice(0, 13);
+    if (!ts) return raw.slice(0, 20);
+    const d = new Date(parseInt(ts));
+    const yy = (d.getFullYear() + 543).toString().slice(2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `SUM-${yy}${mm}${dd}-${raw.slice(-4).toUpperCase()}`;
+}
 
-        // ✅ แก้จุดหลัก: ใช้ innerHTML + แปลง markdown → HTML
-        const summaryEl = document.getElementById('summary-content');
-        summaryEl.innerHTML = markdownToHTML(data.summary || 'ไม่มีข้อมูลสรุป');
+/* ════════════════════════════════════════════
+   Parse AI summary text → structured object
+════════════════════════════════════════════ */
+function parseSummary(text) {
+    if (!text) return { overview: '', keyPoints: [], actions: [] };
 
-        generateKeywords(data.summary || '');
-        generateStatus(data.summary   || '');
+    const result = { overview: '', keyPoints: [], actions: [] };
+
+    // Split by numbered sections **1.** **2.** **3.**
+    const sec1Match = text.match(/\*{0,2}1[.\s📋]+[^\n]*?\*{0,2}([\s\S]*?)(?=\*{0,2}2[.\s🎯]|\*{0,2}3[.\s✅]|$)/i);
+    const sec2Match = text.match(/\*{0,2}2[.\s🎯]+[^\n]*?\*{0,2}([\s\S]*?)(?=\*{0,2}3[.\s✅]|$)/i);
+    const sec3Match = text.match(/\*{0,2}3[.\s✅]+[^\n]*?\*{0,2}([\s\S]*?)(?=---|\*{0,2}📅|$)/i);
+
+    // Overview
+    if (sec1Match) {
+        result.overview = sec1Match[1]
+            .replace(/\*\*/g, '')
+            .replace(/^[-•]\s*/gm, '')
+            .trim();
     }
 
-    /* ============================================================
-       ✅ แปลง markdown-like text → HTML สวยงาม
-       รองรับ: **bold**, - bullet, numbered list, heading ด้วย **
-    ============================================================ */
-    function markdownToHTML(text) {
-        if (!text) return '<p class="text-muted">ไม่มีข้อมูล</p>';
+    // Key points
+    if (sec2Match) {
+        const raw = sec2Match[1];
+        const bullets = raw.match(/^[-•*]\s+.+/gm) || [];
+        result.keyPoints = bullets.map(b => b.replace(/^[-•*]\s+/, '').replace(/\*\*/g, '').trim()).filter(Boolean);
+        if (result.keyPoints.length === 0 && raw.trim()) {
+            result.keyPoints = raw.trim().split('\n').filter(l => l.trim()).map(l => l.replace(/\*\*/g,'').trim());
+        }
+    }
 
-        const lines = text.split('\n');
-        let html = '';
-        let inList = false;
-        let currentSection = null;
-
-        const closeList = () => {
-            if (inList) { html += '</ul>'; inList = false; }
-        };
-
-        const closeSection = () => {
-            if (currentSection) { html += '</div>'; currentSection = null; }
-        };
-
-        lines.forEach(line => {
-            const raw     = line;
-            const trimmed = line.trim();
-
-            // บรรทัดว่าง
-            if (!trimmed) {
-                closeList();
-                html += '<br>';
-                return;
+    // Action items: try to parse markdown table
+    if (sec3Match) {
+        const raw = sec3Match[1];
+        // Table rows: | col | col | col | col |
+        const rows = raw.match(/^\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|/gm) || [];
+        rows.forEach((row, idx) => {
+            if (idx === 0 || /^[\s|:-]+$/.test(row)) return; // skip header / separator
+            const cols = row.split('|').map(c => c.trim()).filter(c => c !== '');
+            if (cols.length >= 2) {
+                result.actions.push({
+                    task:       cols[0] || '—',
+                    owner:      cols[1] || '—',
+                    deadline:   cols[2] || '—',
+                    status:     cols[3] || '⏳ กำลังดำเนินการ'
+                });
             }
-
-            // ✅ ตรวจ heading pattern: **1. 📌 ...** หรือ **🔑 ...**
-            const headingMatch = trimmed.match(/^\*\*(\d+\.\s?.+?)\*\*$/) ||
-                                 trimmed.match(/^\*\*([📌🔑✅⚠️📊].+?)\*\*$/) ||
-                                 trimmed.match(/^\*\*(\d+\.\s*[📌🔑✅⚠️📊].+?)\*\*$/);
-            if (headingMatch) {
-                closeList();
-                closeSection();
-                html += `<div class="summary-section-block"><h3>${escapeHTML(headingMatch[1])}</h3>`;
-                currentSection = true;
-                return;
-            }
-
-            // ✅ bullet list: - หรือ •
-            if (/^[-•]\s/.test(trimmed)) {
-                if (!inList) { html += '<ul>'; inList = true; }
-                const content = trimmed
-                    .replace(/^[-•]\s/, '')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                html += `<li>${content}</li>`;
-                return;
-            }
-
-            // ✅ numbered list: 1. 2. ...
-            if (/^\d+\.\s/.test(trimmed) && !trimmed.match(/^\*\*/)) {
-                closeList();
-                const content = trimmed
-                    .replace(/^\d+\.\s/, '')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                const num = trimmed.match(/^(\d+)/)[1];
-                html += `<p><strong>${num}.</strong> ${content}</p>`;
-                return;
-            }
-
-            // horizontal rule
-            if (/^[-—=]{3,}$/.test(trimmed)) {
-                closeList();
-                html += '<hr>';
-                return;
-            }
-
-            // paragraph ทั่วไป
-            closeList();
-            const content = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            html += `<p>${content}</p>`;
         });
 
-        closeList();
-        closeSection();
-        return html;
-    }
-
-    function escapeHTML(str) {
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    /* ============================================================
-       Keywords จากเนื้อหาสรุปจริง
-    ============================================================ */
-    function generateKeywords(text) {
-        const container = document.getElementById('keywords-container');
-        container.innerHTML = '';
-
-        const patterns = [
-            { re: /นัดหมาย/,            label: 'นัดหมาย',       icon: 'fa-calendar-check', color: '#0d6efd' },
-            { re: /ยา|เภสัช/,           label: 'เภสัชกรรม',     icon: 'fa-pills',          color: '#6f42c1' },
-            { re: /ผ่าตัด/,             label: 'การผ่าตัด',     icon: 'fa-user-md',        color: '#dc3545' },
-            { re: /ผู้ป่วย/,            label: 'ผู้ป่วย',       icon: 'fa-bed',            color: '#20c997' },
-            { re: /รายงาน/,             label: 'รายงาน',         icon: 'fa-file-alt',       color: '#fd7e14' },
-            { re: /ประสาน/,             label: 'ประสานงาน',      icon: 'fa-handshake',      color: '#17a2b8' },
-            { re: /เอกสาร/,             label: 'เอกสาร',         icon: 'fa-file',           color: '#868e96' },
-            { re: /ตรวจสอบ/,            label: 'ตรวจสอบ',        icon: 'fa-search',         color: '#28a745' },
-            { re: /แจ้ง|แจ้งเตือน/,     label: 'การแจ้งเตือน',  icon: 'fa-bell',           color: '#ffc107' },
-            { re: /ติดตาม/,             label: 'ติดตามผล',       icon: 'fa-eye',            color: '#e83e8c' },
-            { re: /แผนก|แผนก/,          label: 'แผนก',           icon: 'fa-hospital',       color: '#0d6efd' },
-            { re: /บันทึก/,             label: 'บันทึก',         icon: 'fa-pen',            color: '#6c757d' },
-            { re: /มติ|ข้อตกลง/,        label: 'มติ/ข้อตกลง',   icon: 'fa-check-double',   color: '#198754' },
-            { re: /ค้างอยู่|รอดำเนินการ/, label: 'รอดำเนินการ',  icon: 'fa-hourglass-half', color: '#dc6502' },
-        ];
-
-        const found = patterns.filter(p => p.re.test(text));
-        if (found.length === 0) {
-            container.innerHTML = '<span class="text-muted small">ไม่พบคำสำคัญพิเศษในการสนทนานี้</span>';
-            return;
+        // If no table, try bullet list fallback
+        if (result.actions.length === 0) {
+            const bullets = raw.match(/^[-•*]\s+.+/gm) || [];
+            bullets.forEach(b => {
+                result.actions.push({
+                    task: b.replace(/^[-•*]\s+/,'').replace(/\*\*/g,'').trim(),
+                    owner: '—', deadline: '—', status: '⏳ กำลังดำเนินการ'
+                });
+            });
         }
-        found.forEach(p => {
-            const badge = document.createElement('div');
-            badge.className = 'keyword-badge';
-            badge.style.cssText = `background:${p.color}18; color:${p.color}; border:1px solid ${p.color}40;`;
-            badge.innerHTML = `<i class="fas ${p.icon}"></i>${p.label}`;
-            container.appendChild(badge);
+    }
+
+    return result;
+}
+
+/* ════════════════════════════════════════════
+   Render parsed sections
+════════════════════════════════════════════ */
+function getStatusClass(s) {
+    if (!s) return 'status-pending';
+    if (/เสร็จ|✅|done/i.test(s)) return 'status-done';
+    if (/ด่วน|🔴|urgent/i.test(s)) return 'status-urgent';
+    if (/รอ|wait|🔵/i.test(s)) return 'status-waiting';
+    return 'status-pending';
+}
+
+function renderBody(parsed) {
+    let html = '';
+
+    /* ── Executive Summary ── */
+    html += `
+    <div class="section">
+        <div class="section-head">
+            <div class="icon-badge badge-blue"><i class="fas fa-file-alt" style="color:#1e5799"></i></div>
+            <h2>📌 สรุปย่อ (Executive Summary)</h2>
+        </div>
+        <div class="exec-card">
+            ${parsed.overview
+                ? parsed.overview.split('\n').filter(l=>l.trim()).map(l=>`<p>${escH(l)}</p>`).join('')
+                : '<p style="color:#999">ไม่มีข้อมูลสรุปภาพรวม</p>'}
+        </div>
+    </div>`;
+
+    /* ── Key Points ── */
+    html += `
+    <div class="section">
+        <div class="section-head">
+            <div class="icon-badge badge-purple"><i class="fas fa-bullseye" style="color:#6d28d9"></i></div>
+            <h2>🗣️ ประเด็นสำคัญที่พูดถึง</h2>
+        </div>`;
+
+    if (parsed.keyPoints.length > 0) {
+        html += '<ul class="key-list">';
+        parsed.keyPoints.forEach((pt, i) => {
+            html += `<li><div class="bullet">${i+1}</div><div>${escH(pt)}</div></li>`;
         });
+        html += '</ul>';
+    } else {
+        html += '<div class="no-action"><i class="fas fa-info-circle"></i> ไม่พบประเด็นสำคัญ</div>';
+    }
+    html += '</div>';
+
+    /* ── Action Items ── */
+    html += `
+    <div class="section">
+        <div class="section-head">
+            <div class="icon-badge badge-orange"><i class="fas fa-tasks" style="color:#c05621"></i></div>
+            <h2>✅ มติ / ข้อตกลง / สิ่งที่ต้องทำ (Action Items)</h2>
+        </div>`;
+
+    if (parsed.actions.length > 0) {
+        html += `
+        <table class="action-table">
+            <thead>
+                <tr>
+                    <th style="width:35%">เรื่อง</th>
+                    <th style="width:22%">ผู้รับผิดชอบ</th>
+                    <th style="width:22%">กำหนดแล้วเสร็จ</th>
+                    <th style="width:21%">สถานะ</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        parsed.actions.forEach(a => {
+            const cls = getStatusClass(a.status);
+            html += `
+            <tr>
+                <td>${escH(a.task)}</td>
+                <td>${escH(a.owner)}</td>
+                <td>${escH(a.deadline)}</td>
+                <td><span class="status-badge ${cls}">${escH(a.status)}</span></td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+    } else {
+        html += '<div class="no-action"><i class="fas fa-check-circle" style="color:var(--green)"></i> ไม่มีงานที่ต้องดำเนินการเพิ่มเติม</div>';
+    }
+    html += '</div>';
+
+    return html;
+}
+
+function escH(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+/* ════════════════════════════════════════════
+   Main init
+════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+    const { date, time } = thaiNow();
+    document.getElementById('metaDate').textContent = date;
+    document.getElementById('metaTime').textContent = time + ' น.';
+
+    const params    = new URLSearchParams(location.search);
+    const summaryId = params.get('id')      || '';
+    const roomId    = params.get('room_id') || '';
+
+    document.getElementById('metaId').textContent = formatReportId(summaryId);
+
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) { location.href = '/login'; return; }
+
+    if (!summaryId) {
+        showError('ไม่พบรหัสสรุป — กรุณาสร้างสรุปจากหน้าแชทก่อน');
+        return;
     }
 
-    /* ============================================================
-       Status จากเนื้อหาสรุปจริง
-    ============================================================ */
-    function generateStatus(text) {
-        const container = document.getElementById('status-container');
+    try {
+        const res  = await fetch(`/api/chat-summary/details?id=${summaryId}&room_id=${roomId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
 
-        let s;
-        if (/รอ|ยังไม่|ค้างอยู่|ยังต้อง/.test(text)) {
-            s = { type: 'pending',   icon: 'fa-hourglass-half',
-                  title: 'มีประเด็นที่รอดำเนินการ',
-                  desc:  'พบประเด็นที่ยังต้องดำเนินการต่อหรือรอการติดตาม กรุณาตรวจสอบในหัวข้อ "ประเด็นที่ยังค้างอยู่"' };
-        } else if (/ติดต่อกลับ|โทรกลับ|แจ้งผล|นัด/.test(text)) {
-            s = { type: 'followup',  icon: 'fa-phone-alt',
-                  title: 'ต้องติดต่อกลับ',
-                  desc:  'พบการระบุให้ติดต่อกลับหรือนัดหมายในการสนทนา กรุณาดำเนินการตามที่ระบุ' };
-        } else {
-            s = { type: 'completed', icon: 'fa-check-circle',
-                  title: 'ดำเนินการเรียบร้อยแล้ว',
-                  desc:  'การสนทนาสิ้นสุดลงโดยไม่มีประเด็นค้างคา ข้อมูลได้รับการบันทึกเรียบร้อยแล้ว' };
-        }
+        if (!data.success) throw new Error(data.error || 'โหลดข้อมูลไม่สำเร็จ');
 
-        container.innerHTML = `
-            <div class="status-badge status-${s.type}">
-                <i class="fas ${s.icon} fa-lg mt-1"></i>
-                <div>
-                    <div>${s.title}</div>
-                    <div class="fw-normal mt-1" style="font-size:14px;">${s.desc}</div>
-                </div>
-            </div>`;
+        // Fill meta
+        document.getElementById('metaRoom').textContent     = data.room_name     || '—';
+        document.getElementById('metaMsgCount').textContent = data.message_count  ? data.message_count + ' ข้อความ' : '—';
+        document.getElementById('metaRange').textContent    = data.date_range     || '—';
+
+        // Render body
+        const parsed = parseSummary(data.summary || '');
+        document.getElementById('reportBody').innerHTML = renderBody(parsed);
+
+    } catch (err) {
+        console.error('Report load error:', err);
+        showError(err.message || 'ไม่สามารถโหลดข้อมูลได้');
     }
+});
 
-    /* ============================================================
-       Error state
-    ============================================================ */
-    function showError(msg) {
-        document.getElementById('summary-content').innerHTML =
-            `<div class="alert alert-warning mt-2">
-                <i class="fas fa-exclamation-triangle me-2"></i>${msg}
-             </div>`;
-        document.getElementById('keywords-container').innerHTML = '';
-        document.getElementById('status-container').innerHTML   = '';
-    }
+function showError(msg) {
+    document.getElementById('reportBody').innerHTML = `
+        <div class="state-box">
+            <i class="fas fa-exclamation-triangle" style="color:#e67e22"></i>
+            <p style="font-weight:600; margin-bottom:6px">เกิดข้อผิดพลาด</p>
+            <p style="font-size:13px; color:#999">${escH(msg)}</p>
+        </div>`;
+}
 
-    /* ============================================================
-       PDF
-    ============================================================ */
-    function generatePDF() {
-        const btn = document.getElementById('btn-pdf');
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง...';
-        btn.disabled  = true;
+/* ─── PDF Button ─── */
+document.getElementById('btnPDF').addEventListener('click', () => {
+    const btn = document.getElementById('btnPDF');
+    btn.innerHTML = '<i class="fas fa-circle-notch spin"></i> กำลังสร้าง...';
+    btn.disabled = true;
 
-        html2pdf().set({
-            margin: [15, 15, 15, 15],
-            filename: `รายงานสรุปการสนทนา_${Date.now()}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(document.getElementById('report-content')).save()
-          .then(() => { btn.innerHTML = orig; btn.disabled = false; });
-    }
-    </script>
+    html2pdf().set({
+        margin: [10, 10, 10, 10],
+        filename: `รายงานสรุปการสนทนา_${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(document.getElementById('reportContent')).save()
+      .then(() => { btn.innerHTML = '<i class="fas fa-file-pdf"></i> PDF'; btn.disabled = false; });
+});
+</script>
 </body>
 </html>
