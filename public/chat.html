@@ -735,52 +735,131 @@
     border-top-right-radius: 16px;
     border-bottom-right-radius: 16px;
 }
-/* ===== ปุ่มยกเลิกและปุ่มปิดใน Modal ===== */
-.modal-footer .btn-secondary,
-#cancelCreateRoom,
-.summary-actions .btn-secondary,
-.modal-footer .close-modal.btn-secondary,
-.modal .btn-secondary.close-modal {
-    background: #f1f5f9 !important;
-    color: #475569 !important;
-    border: 1px solid #e2e8f0 !important;
+/* ===== ปุ่มใน Modal AI Summary (ปิด, คัดลอก, บันทึก, ดูรายงาน) ===== */
+#aiSummaryModal .summary-actions {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e2e8f0;
+    justify-content: flex-end;
+    background: #f8fafc;
+    flex-wrap: wrap;
+}
+
+#aiSummaryModal .summary-actions button {
     padding: 12px 24px;
-    border-radius: 10px;
+    border: none;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
     font-family: 'Prompt', sans-serif;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    min-width: 100px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.modal-footer .btn-secondary:hover,
-#cancelCreateRoom:hover,
-.summary-actions .btn-secondary:hover,
-.modal-footer .close-modal.btn-secondary:hover,
-.modal .btn-secondary.close-modal:hover {
-    background: #e2e8f0 !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+/* ===== ปุ่มปิด (สีเทา) ===== */
+#aiSummaryModal .summary-actions .btn-secondary,
+#aiSummaryModal .summary-actions .close-modal {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
-.modal-footer .btn-secondary:active,
-#cancelCreateRoom:active,
-.summary-actions .btn-secondary:active,
-.modal-footer .close-modal.btn-secondary:active,
-.modal .btn-secondary.close-modal:active {
-    transform: translateY(0);
+#aiSummaryModal .summary-actions .btn-secondary:hover,
+#aiSummaryModal .summary-actions .close-modal:hover {
+    background: #e2e8f0 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* ===== ปุ่มคัดลอก (สีฟ้า) ===== */
+#copySummaryBtn {
+    background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    color: white !important;
+}
+
+#copySummaryBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(52, 152, 219, 0.4) !important;
+}
+
+/* ===== ปุ่มบันทึก (สีเขียว) ===== */
+#saveSummaryBtn {
+    background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
+    color: white !important;
+}
+
+#saveSummaryBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(46, 204, 113, 0.4) !important;
+}
+
+/* ===== ปุ่มดูรายงาน (สีม่วง) ===== */
+#openReportBtn {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+    color: white !important;
+}
+
+#openReportBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(155, 89, 182, 0.4) !important;
+}
+
+/* ===== ปุ่มใน Date Range Modal (เลือกช่วงเวลา) ===== */
+#dateRangeModal .modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e2e8f0;
+    justify-content: flex-end;
+    background: #f8fafc;
+}
+
+#dateRangeModal .modal-footer button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Prompt', sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#dateRangeModal .modal-footer .btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+#dateRangeModal .modal-footer .btn-secondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#confirmDateRange {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+#confirmDateRange:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(102, 126, 234, 0.4);
 }
 
 /* ===== Ripple Effect ===== */
-.modal-footer .btn-secondary::after,
-#cancelCreateRoom::after,
-.summary-actions .btn-secondary::after {
+#aiSummaryModal .summary-actions button::after,
+#dateRangeModal .modal-footer button::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -788,17 +867,30 @@
     width: 0;
     height: 0;
     border-radius: 50%;
-    background: rgba(0,0,0,0.1);
+    background: rgba(255, 255, 255, 0.3);
     transform: translate(-50%, -50%);
     transition: width 0.6s, height 0.6s;
     pointer-events: none;
 }
 
-.modal-footer .btn-secondary:active::after,
-#cancelCreateRoom:active::after,
-.summary-actions .btn-secondary:active::after {
+#aiSummaryModal .summary-actions button:active::after,
+#dateRangeModal .modal-footer button:active::after {
     width: 300px;
     height: 300px;
+}
+
+/* ===== Responsive สำหรับมือถือ ===== */
+@media (max-width: 768px) {
+    #aiSummaryModal .summary-actions,
+    #dateRangeModal .modal-footer {
+        flex-direction: column;
+    }
+    
+    #aiSummaryModal .summary-actions button,
+    #dateRangeModal .modal-footer button {
+        width: 100%;
+        justify-content: center;
+    }
 }
 }
     </style>
