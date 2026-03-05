@@ -520,7 +520,6 @@
 </head>
 <body>
     <div class="auth-container">
-        <!-- Left Side - Login Form -->
         <div class="auth-card">
             <!-- Logo and Header -->
             <div class="auth-header">
@@ -528,8 +527,8 @@
                     <i class="fas fa-hospital"></i>
                     <h1>โรงพยาบาลเซนต์เมรี่</h1>
                 </div>
-                <h2>ยินดีต้อนรับกลับ</h2>
-                <p>กรุณาเข้าสู่ระบบเพื่อใช้งานระบบสื่อสารภายใน</p>
+                <h2>เข้าสู่ระบบ</h2>
+                <p>กรุณากรอกข้อมูลเพื่อเข้าสู่ระบบสื่อสารภายในโรงพยาบาล</p>
             </div>
 
             <!-- Login Form -->
@@ -539,8 +538,7 @@
                         <i class="fas fa-user"></i> ชื่อผู้ใช้หรือรหัสพนักงาน
                     </label>
                     <input type="text" id="username" name="username" required 
-                           placeholder="กรอกชื่อผู้ใช้หรือรหัสพนักงาน"
-                           autocomplete="username">
+                           placeholder="กรอกชื่อผู้ใช้หรือรหัสพนักงาน">
                     <div class="error-message" id="usernameError"></div>
                 </div>
 
@@ -550,8 +548,7 @@
                     </label>
                     <div class="password-input">
                         <input type="password" id="password" name="password" required 
-                               placeholder="กรอกรหัสผ่าน"
-                               autocomplete="current-password">
+                               placeholder="กรอกรหัสผ่าน">
                         <button type="button" class="toggle-password" id="togglePassword">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -562,14 +559,14 @@
                 <div class="form-options">
                     <label class="checkbox">
                         <input type="checkbox" id="rememberMe">
-                        <span>จดจำฉันไว้ในระบบ</span>
+                        <span>จดจำฉัน</span>
                     </label>
                     <a href="/forgot-password" class="forgot-password">
                         ลืมรหัสผ่าน?
                     </a>
                 </div>
 
-                <button type="submit" class="btn-primary">
+                <button type="submit" class="btn-primary btn-block">
                     <i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ
                 </button>
 
@@ -588,7 +585,7 @@
             </div>
         </div>
 
-        <!-- Right Side - Hospital Info -->
+        <!-- Hospital Info -->
         <div class="hospital-info">
             <div class="info-content">
                 <h3><i class="fas fa-info-circle"></i> เกี่ยวกับระบบ</h3>
