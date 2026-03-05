@@ -51,7 +51,53 @@ class EnhancedChatApp {
         this.updateUserData(e.detail);
     });
     }
+    // ✅ เพิ่มฟังก์ชัน setupModalCloseButtons
+setupModalCloseButtons() {
+    console.log('🔧 Setting up modal close buttons...');
     
+    // รายการ modal ที่ต้องการจัดการ
+    const modalIds = [
+        'createRoomModal',
+        'addMembersModal', 
+        'roomMembersModal',
+        'profileModal',
+        'ttsSettingsModal',
+        'dateRangeModal',
+        'aiSummaryModal',
+        'emojiPickerModal'
+    ];
+    
+    modalIds.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        // ปุ่มปิด modal ทุกปุ่ม
+        modal.querySelectorAll('.close-modal, .close-emoji-modal, .btn-secondary').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                modal.classList.remove('active');
+            });
+        });
+        
+        // คลิกนอก modal
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    });
+    
+    // ปุ่ม cancel ใน create room modal
+    const cancelBtn = document.getElementById('cancelCreateRoom');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            const modal = document.getElementById('createRoomModal');
+            if (modal) modal.classList.remove('active');
+        });
+    }
+    
+    console.log('✅ Modal close buttons setup complete');
+}
     // ✅ เปิด emoji picker
 openEmojiPicker() {
     const modal = document.getElementById('emojiPickerModal');
