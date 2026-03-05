@@ -3506,13 +3506,14 @@ document.head.appendChild(roomMembersStyles);
                 overflow-y: auto;
             }
             
-            .modal-footer {
-                padding: 20px 24px;
-                border-top: 1px solid #eee;
-                display: flex;
-                justify-content: flex-end;
-                gap: 12px;
-            }
+           .modal-footer {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e2e8f0;
+    justify-content: flex-end;
+    background: #f8fafc;
+}
             
             .form-group {
                 margin-bottom: 20px;
