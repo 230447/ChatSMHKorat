@@ -9,120 +9,249 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/responsive.css">
     <style>
-        /* เพิ่มสไตล์สำหรับแยกประเภทห้อง */
-        .room-category {
-            padding: 10px 15px;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 1px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin-top: 5px;
-        }
-        
-        .room-category:first-child {
-            border-top: none;
-            margin-top: 0;
-        }
-        
-        .room-type-badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 10px;
-            margin-left: 5px;
-            vertical-align: middle;
-        }
-        
-        .badge-department {
-            background-color: #3498db;
-            color: white;
-        }
-        
-        .badge-group {
-            background-color: #2ecc71;
-            color: white;
-        }
-        
-        .badge-private {
-            background-color: #9b59b6;
-            color: white;
-        }
-        
-        /* TTS Controls Styles */
-        .tts-controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #60a5fa;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gradient-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-2: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-success: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --shadow-hover: 0 20px 25px -5px rgba(37,99,235,0.3);
         }
 
-        .message:hover .tts-controls {
-            opacity: 1;
-        }
-
-        .tts-btn {
-            background: rgba(52, 152, 219, 0.8);
-            border: none;
-            width: 28px;
-            height: 28px;
+        /* ปุ่มใน header */
+        .btn-icon {
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: none;
             color: white;
+            font-size: 18px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .tts-btn:hover {
+        .btn-icon:hover {
+            background: var(--gradient-1);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-icon:active {
+            transform: translateY(0);
+        }
+
+        .btn-icon i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-icon:hover i {
+            transform: scale(1.1);
+        }
+
+        /* ปุ่ม AI Summary */
+        #aiSummaryBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #aiSummaryBtn i {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* ปุ่ม TTS */
+        #ttsToggleBtn {
+            background: rgba(52, 152, 219, 0.2);
+        }
+
+        #ttsToggleBtn.active {
+            background: var(--success);
+            color: white;
+        }
+
+        /* ปุ่มสร้างห้อง */
+        .create-room-btn-full {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--gradient-success);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .create-room-btn-full::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .create-room-btn-full:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .create-room-btn-full:hover::before {
+            left: 100%;
+        }
+
+        .create-room-btn-full:active {
+            transform: translateY(-1px);
+        }
+
+        .create-room-btn-full i {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .create-room-btn-full:hover i {
+            transform: rotate(90deg);
+        }
+
+        /* ปุ่มส่งข้อความ */
+        .btn-send {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--gradient-1);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-send:hover {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-send:active {
+            transform: scale(0.95);
+        }
+
+        .btn-send i {
+            transition: transform 0.3s ease;
+        }
+
+        .btn-send:hover i {
+            transform: translateX(5px);
+        }
+
+        /* ปุ่มใน modal */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ปุ่มใน summary modal */
+        #copySummaryBtn, #saveSummaryBtn, #openReportBtn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: white;
+        }
+
+        #copySummaryBtn {
             background: #3498db;
         }
 
-        /* TTS Settings Modal */
-        .tts-settings {
-            padding: 15px 0;
+        #saveSummaryBtn {
+            background: #27ae60;
         }
 
-        .setting-group {
-            margin-bottom: 15px;
+        #openReportBtn {
+            background: #9b59b6;
         }
 
-        .setting-group label {
-            display: block;
-            margin-bottom: 5px;
+        #copySummaryBtn:hover, #saveSummaryBtn:hover, #openReportBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
         }
 
-        .setting-group small {
-            color: #7f8c8d;
-            font-size: 12px;
-        }
-
-        .tts-test textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        /* New Styles for Tabs */
-        .sidebar-tabs {
-            display: flex;
-            background: rgba(0, 0, 0, 0.15);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 4px;
-        }
-
+        /* ปุ่ม tab */
         .tab-btn {
-            flex: 1;
             padding: 12px 16px;
             background: transparent;
             border: none;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255,255,255,0.6);
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
@@ -131,611 +260,109 @@
             justify-content: center;
             gap: 8px;
             border-radius: 8px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s ease;
             position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-1);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
         }
 
         .tab-btn:hover {
-            color: rgba(255, 255, 255, 0.8);
-            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            background: rgba(255,255,255,0.05);
         }
 
         .tab-btn.active {
-            background: rgba(74, 144, 226, 0.2);
             color: white;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            background: rgba(74,144,226,0.2);
         }
 
-        .tab-btn i {
-            font-size: 14px;
+        .tab-btn.active::after {
+            width: 80%;
         }
 
-        .tab-btn .badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            background: #4a90e2;
-            color: white;
-            font-size: 10px;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 4px;
-        }
-
-        .tab-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .tab-pane {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .tab-pane.active {
-            display: flex;
-        }
-
-        /* Search and Create Section */
-        .search-create-section {
-            padding: 16px;
-            background: rgba(0, 0, 0, 0.1);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .search-bar {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .search-bar i {
-            position: absolute;
-            left: 12px;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
-        }
-
-        .search-bar input {
-            width: 100%;
-            padding: 10px 16px 10px 36px;
+        /* ปุ่มสถานะผู้ใช้ */
+        .status-btn {
+            padding: 8px 16px;
+            background: transparent;
             border: none;
             border-radius: 20px;
-            background: rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .status-btn.active {
+            background: var(--primary);
             color: white;
-            font-size: 13px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
         }
 
-        .search-bar input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .search-bar input:focus {
-            outline: none;
-            background: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
-        }
-
-        /* Create Room Button */
-        .create-room-btn-full {
-            width: 100%;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        .status-btn:hover:not(.active) {
+            background: rgba(255,255,255,0.1);
             color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
+        }
+
+        /* ปุ่ม mini TTS */
+        .mini-tts-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(52,152,219,0.2);
+            border: 1px solid rgba(52,152,219,0.3);
+            color: #3498db;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+            font-size: 10px;
+            transition: all 0.3s ease;
         }
 
-        .create-room-btn-full:hover {
-            background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+        .mini-tts-btn:hover {
+            background: #3498db;
+            color: white;
+            transform: scale(1.2);
         }
 
-        .create-room-btn-full:active {
-            transform: translateY(0);
+        /* ปุ่มใน create room modal */
+        #confirmCreateRoom {
+            background: var(--gradient-success);
+            color: white;
         }
 
-        .create-room-btn-full i {
-            font-size: 16px;
+        #confirmCreateRoom:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
-        /* User Online Indicator */
-        .user-avatar {
-            position: relative;
-            width: 42px;
-            height: 42px;
-            flex-shrink: 0;
-        }
-        
-        .online-indicator {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid rgba(30, 58, 95, 0.8);
-        }
-        
-        .online-indicator.online {
-            background: #5cb85c;
-        }
-        
-        .online-indicator.offline {
-            background: #95a5a6;
-        }
-        
-        .status-text {
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-weight: 500;
-        }
-        
-        .status-text.online {
-            background: rgba(46, 204, 113, 0.15);
-            color: #5cb85c;
-        }
-        
-        .status-text.offline {
-            background: rgba(149, 165, 166, 0.15);
-            color: #95a5a6;
+        #cancelCreateRoom {
+            background: #f1f5f9;
+            color: #475569;
         }
 
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-        }
-        
-        .empty-state p {
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-        
-        .empty-state small {
-            font-size: 12px;
-            opacity: 0.7;
+        /* Loading animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-/* AI Summary Styles */
-.ai-summary-section {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin: 15px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    animation: slideIn 0.5s ease-out;
-}
-
-.ai-summary-section::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 200px;
-    height: 200px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-}
-
-.ai-summary-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    position: relative;
-    z-index: 1;
-}
-
-.ai-summary-header h4 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0;
-    font-size: 18px;
-}
-
-.ai-summary-header h4 i {
-    color: #ffd700;
-}
-
-.ai-summary-content {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    position: relative;
-    z-index: 1;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.ai-summary-content p {
-    margin: 0;
-    line-height: 1.6;
-    font-size: 14px;
-}
-
-.ai-summary-actions {
-    display: flex;
-    gap: 10px;
-    position: relative;
-    z-index: 1;
-}
-
-.btn-summary {
-    flex: 1;
-    padding: 8px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.3s ease;
-}
-
-.btn-summary i {
-    font-size: 14px;
-}
-
-.btn-summary-save {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.btn-summary-save:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
-
-.btn-summary-report {
-    background: #ff6b6b;
-    color: white;
-}
-
-.btn-summary-report:hover {
-    background: #ff5252;
-    transform: translateY(-2px);
-}
-
-/* Summary Modal Styles */
-.summary-modal-content {
-    max-width: 600px;
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-}
-
-.summary-modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    text-align: center;
-}
-
-.summary-modal-body {
-    padding: 25px;
-    max-height: 60vh;
-    overflow-y: auto;
-}
-
-.summary-textarea {
-    width: 100%;
-    min-height: 150px;
-    padding: 15px;
-    border: 2px solid #e3e6f0;
-    border-radius: 8px;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: vertical;
-    transition: border-color 0.3s ease;
-}
-
-.summary-textarea:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.summary-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.btn-save-pdf {
-    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.3s ease;
-}
-
-.btn-save-pdf:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
-}
-
-.btn-cancel {
-    background: #f8f9fa;
-    color: #6c757d;
-    border: 1px solid #dee2e6;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-cancel:hover {
-    background: #e9ecef;
-}
-
-/* Report Dashboard Styles */
-.report-card {
-    border: 1px solid #e3e6f0;
-    border-radius: 10px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    background: white;
-}
-
-.report-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.report-card-header {
-    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-    color: white;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.report-card-body {
-    padding: 20px;
-}
-
-.report-date {
-    font-size: 12px;
-    color: #6c757d;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.report-preview {
-    color: #6c757d;
-    font-size: 14px;
-    line-height: 1.5;
-    margin: 10px 0;
-    max-height: 60px;
-    overflow: hidden;
-}
-
-.report-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 15px;
-}
-
-.btn-view-report {
-    flex: 1;
-    padding: 8px 12px;
-    background: #4e73df;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-.btn-download-report {
-    flex: 1;
-    padding: 8px 12px;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-/* Animation */
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .ai-summary-actions {
-        flex-direction: column;
-    }
-    
-    .summary-actions {
-        flex-direction: column;
-    }
-    /* ป้องกันการกระโดดของ scroll และปรับปรุงประสิทธิภาพ */
-#messagesList {
-    scroll-behavior: smooth;
-    overflow-anchor: none;
-    contain: content;
-    will-change: transform;
-}
-
-.message {
-    contain: layout style paint;
-    margin-bottom: 4px;
-    transform: translateZ(0);
-}
-
-/* ปรับปรุงการแสดงผลข้อความ */
-.message-content {
-    display: flex;
-    flex-direction: column;
-    min-height: auto;
-}
-
-/* ป้องกันการขยับของ input area */
-.message-input-area {
-    flex-shrink: 0;
-}
-
-/* ใส่ transition สำหรับการเพิ่มข้อความใหม่ */
-@keyframes messageAppear {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.message:last-of-type {
-    animation: messageAppear 0.3s ease-out;
-}
-
-/* ปรับปรุงการ scroll */
-.messages-container {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-}
-
-/* ป้องกันการขยับของ layout */
-.chat-header {
-    flex-shrink: 0;
-}
-
-/* Optimistic UI สำหรับข้อความที่กำลังส่ง */
-.temp-message {
-    opacity: 0.8;
-    position: relative;
-}
-
-.temp-message::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-}
-
-/* ปรับปรุงการแสดงผล avatar */
-.message-avatar {
-    flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-}
-/* ข้อความที่เราส่ง (ขวา) - ไม่มีรูป */
-.message.sent {
-    margin-left: auto;
-    margin-right: 16px;
-    max-width: 75%;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.message.sent .message-content {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-    color: white;
-    border-bottom-right-radius: 4px;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    border-bottom-left-radius: 16px;
-}
-
-/* ข้อความคนอื่น (ซ้าย) - มีรูป */
-.message.received {
-    margin-left: 16px;
-    margin-right: auto;
-    max-width: 75%;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-}
-
-.message.received .message-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.message.received .message-content {
-    background: white;
-    color: #2c3e50;
-    border-bottom-left-radius: 4px;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
-}
-}
+        .fa-spinner, .fa-circle-notch {
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
