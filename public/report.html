@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
+        /* (CSS เดิมทั้งหมด保持不变) */
         :root {
             --blue-dark:   #1a3a5c;
             --blue-mid:    #1e5799;
@@ -562,6 +563,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const params    = new URLSearchParams(location.search);
     const summaryId = params.get('id')      || '';
     const roomId    = params.get('room_id') || '';
+    
+    // ✅ ตรวจสอบข้อมูลจาก sessionStorage (มาจาก openReportPage)
+    const reportData = sessionStorage.getItem('reportData');
+    if (reportData) {
+        try {
+            const stored = JSON.parse(reportData);
+            console.log('📋 พบข้อมูลรายงานจาก sessionStorage:', stored);
+            
+            // แสดงข้อมูลที่เก็บไว้ทันที
+            if (stored.summary) {
+                document.getElementById('metaRoom').textContent = stored.room_name || '—';
+                document.getElementById('metaDate').textContent = stored.date || date;
+                document.getElementById('metaTime').textContent = stored.time ? stored.time + ' น.' : time + ' น.';
+                
+                // ใช้ summary ที่เก็บไว้
+                const parsed = parseSummary(stored.summary);
+                document.getElementById('reportBody').innerHTML = renderBody(parsed);
+                
+                // ตั้งค่ารหัสรายงาน
+                if (summaryId) {
+                    document.getElementById('metaId').textContent = formatReportId(summaryId);
+                } else {
+                    document.getElementById('metaId').textContent = 'REPORT_' + Date.now();
+                }
+                
+                // ✅ ไม่ต้องเรียก API
+                return;
+            }
+        } catch (e) {
+            console.warn('⚠️ ไม่สามารถอ่าน sessionStorage ได้:', e);
+        }
+    }
 
     document.getElementById('metaId').textContent = formatReportId(summaryId);
 

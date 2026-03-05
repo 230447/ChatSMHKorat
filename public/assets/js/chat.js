@@ -311,87 +311,7 @@ scrollToBottom(force = false) {
         messagesList.scrollTop = messagesList.scrollHeight;
     });
 }
-    // เพิ่มฟังก์ชันนี้ใน class EnhancedChatApp
-openReportPage(summaryText) {
-    if (!this.currentRoom) {
-        this.showNotification('แจ้งเตือน', 'ไม่พบข้อมูลห้อง', 'error');
-        return;
-    }
-    
-    // สร้าง unique ID สำหรับรายงาน
-    const reportId = 'REPORT_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // เตรียมข้อมูลที่จะส่งไปยังหน้า report
-    const reportData = {
-        room_id: this.currentRoom.room_id,
-        room_name: this.currentRoom.room_name,
-        room_type: this.currentRoom.room_type,
-        summary_text: summaryText,
-        report_id: reportId,
-        generated_at: new Date().toISOString(),
-        generated_by: this.currentUser?.user_id || 'system'
-    };
-    
-    console.log('📋 Opening report page with data:', reportData);
-    
-    // วิธีที่ 1: ใช้ URL parameters (ง่ายที่สุด)
-    const params = new URLSearchParams({
-        id: reportId,
-        room_id: reportData.room_id,
-        room_name: encodeURIComponent(reportData.room_name),
-        summary: encodeURIComponent(summaryText.substring(0, 500)), // ส่งส่วนแรก
-        date: new Date().toISOString().split('T')[0]
-    });
-    
-    // เปิดหน้า report ในแท็บใหม่
-    window.open(`/report.html?${params.toString()}`, '_blank');
-    
-    // หรือ วิธีที่ 2: เก็บข้อมูลใน localStorage/sessionStorage
-    // sessionStorage.setItem('current_report', JSON.stringify(reportData));
-    // window.open('/report.html', '_blank');
-    
-    // ✅ แสดง notification
-    this.showNotification('เปิดรายงาน', 'กำลังเปิดหน้ารายงาน...', 'success');
-}
-    setupModalCloseButtons() {
-    // Close room members modal
-    const roomMembersModal = document.getElementById('roomMembersModal');
-    if (roomMembersModal) {
-        const closeButtons = roomMembersModal.querySelectorAll('.close-modal');
-        closeButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                roomMembersModal.classList.remove('active');
-            });
-        });
-        
-        // Close when clicking outside
-        roomMembersModal.addEventListener('click', (e) => {
-            if (e.target === roomMembersModal) {
-                roomMembersModal.classList.remove('active');
-            }
-        });
-    }
-    
-    // Close other modals similarly...
-    const modals = ['addMembersModal', 'profileModal', 'ttsSettingsModal', 'createRoomModal'];
-    modals.forEach(modalId => {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            const closeButtons = modal.querySelectorAll('.close-modal');
-            closeButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    modal.classList.remove('active');
-                });
-            });
-            
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                }
-            });
-        }
-    });
-}
+   
 
 // ฟังก์ชันแสดง modal เพิ่มสมาชิก
 async showAddMembersModal() {
@@ -4653,7 +4573,7 @@ showDateRangePicker() {
 }
 
 // ✅ ฟังก์ชันใหม่: เรียก API สรุป
-// ✅ ฟังก์ชันเรียก API สรุป (แก้ไขแล้ว)
+
 async callSummaryAPI(startDate, endDate, messageCount) {
     try {
         const token = localStorage.getItem('token');
@@ -4936,7 +4856,7 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
         viewReportBtn.parentNode.replaceChild(newViewReportBtn, viewReportBtn);
         
         newViewReportBtn.addEventListener('click', () => {
-            window.open(reportUrl, '_blank', 'width=1200,height=800');
+ this.openReportPage(summary, { room_id: roomId, room_name: stats.room_name });            window.open(reportUrl, '_blank', 'width=1200,height=800');
         });
         
         // เปลี่ยนสีปุ่มเป็นเขียว
@@ -4944,7 +4864,39 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
         newViewReportBtn.style.borderColor = '#27ae60';
     }
 }
-
+    // ✅ ฟังก์ชันเปิดหน้ารายงาน
+    openReportPage(summaryText, roomData) {
+        try {
+            const room = roomData || this.currentRoom;
+            
+            if (!room) {
+                this.showNotification('แจ้งเตือน', 'ไม่พบข้อมูลห้อง', 'error');
+                return;
+            }
+            
+            // เตรียมข้อมูลที่จะส่งไปยังหน้า report
+            const reportData = {
+                summary: summaryText,
+                room_name: room.room_name || 'ไม่ระบุห้อง',
+                room_id: room.room_id || null,
+                date: new Date().toLocaleDateString('th-TH'),
+                time: new Date().toLocaleTimeString('th-TH')
+            };
+            
+            console.log('📋 Opening report page with data:', reportData);
+            
+            // เก็บข้อมูลใน sessionStorage
+            sessionStorage.setItem('reportData', JSON.stringify(reportData));
+            
+            // เปิดหน้า report ในแท็บใหม่
+            window.open('/report', '_blank');
+            
+            this.showNotification('เปิดรายงาน', 'กำลังเปิดหน้ารายงาน...', 'success');
+        } catch (error) {
+            console.error('❌ เปิดหน้ารายงานผิดพลาด:', error);
+            this.showNotification('ผิดพลาด', 'ไม่สามารถเปิดหน้ารายงานได้', 'error');
+        }
+    }
 formatSummary(summary) {
     if (!summary) return '<p class="text-muted">ไม่มีข้อมูล</p>';
     

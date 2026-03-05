@@ -179,24 +179,59 @@ function createFallbackSummary(messages, roomName) {
     const timeRange = messages.length > 0
         ? `${messages[0].date} ${messages[0].time} - ${messages[messages.length-1].date} ${messages[messages.length-1].time}`
         : 'ไม่ระบุ';
+    
+    // วิเคราะห์ keywords
     const keywords = {};
-    const stopWords = ['ครับ','ค่ะ','นะ','ได้','แล้ว','และ','หรือ','ที่','ใน','เป็น','มี','ให้','ไป','มา','จะ','ก็','แต่','เลย'];
+    const stopWords = ['ครับ','ค่ะ','นะ','ได้','แล้ว','และ','หรือ','ที่','ใน','เป็น','มี','ให้','ไป','มา','จะ','ก็','แต่','เลย','คะ','ขอ','หน่อย','ด้วย'];
+    
     messages.forEach(m => {
+        if (!m.message_text) return;
         m.message_text.split(/\s+/).forEach(word => {
-            if (word.length > 2 && !stopWords.includes(word)) keywords[word] = (keywords[word] || 0) + 1;
+            if (word && word.length > 2 && !stopWords.includes(word)) {
+                keywords[word] = (keywords[word] || 0) + 1;
+            }
         });
     });
-    const topKeywords = Object.entries(keywords).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w])=>w).join(', ');
+    
+    const topKeywords = Object.entries(keywords)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([w]) => w)
+        .join(', ');
+    
+    // ดึงตัวอย่างข้อความ
     const sampleMsgs = [];
     const seenUsers = new Set();
     for (const m of messages) {
-        if (!seenUsers.has(m.full_name) && m.message_text.length > 10) {
-            sampleMsgs.push(`- ${m.full_name}: "${m.message_text.substring(0,60)}..."`);
+        if (!seenUsers.has(m.full_name) && m.message_text && m.message_text.length > 10) {
+            sampleMsgs.push(`- ${m.full_name}: "${m.message_text.substring(0, 80)}${m.message_text.length > 80 ? '...' : ''}"`);
             seenUsers.add(m.full_name);
         }
-        if (sampleMsgs.length >= 3) break;
+        if (sampleMsgs.length >= 4) break;
     }
-    return `**1. 📋 สรุปภาพรวม**\nการสนทนาในห้อง "${roomName}" ช่วง ${timeRange} มีผู้เข้าร่วม ${uniqueUsers.length} คน รวม ${messages.length} ข้อความ\n\n**2. 🎯 ประเด็นสำคัญ**\n- หัวข้อหลัก: ${topKeywords || 'ไม่สามารถระบุได้'}\n${sampleMsgs.join('\n')}\n\n**3. 📅 นัดหมาย**\n- ไม่พบการนัดหมาย\n\n**4. ✅ Action Items**\n- ไม่มี\n\n**5. ⚠️ ประเด็นค้างอยู่**\n- ไม่มี\n\n**6. 💊 ข้อมูลทางการแพทย์**\n- ไม่มี\n\n**7. 📊 สถิติ**\n- ผู้เข้าร่วม: ${uniqueUsers.join(', ')}\n- ช่วงเวลา: ${timeRange}\n- จำนวนข้อความ: ${messages.length}\n- โทน: ปกติ | ระดับ: 🟢 ทั่วไป\n\n⚠️ *สรุปโดยระบบสำรอง (Gemini AI ไม่พร้อมใช้งาน)*`;
+    
+    const now = new Date();
+    const thaiDate = now.toLocaleDateString('th-TH', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    return `**📋 สรุปการสนทนา (ระบบสำรอง)**\n\n` +
+           `**1. ข้อมูลทั่วไป**\n` +
+           `- ห้องสนทนา: ${roomName}\n` +
+           `- วันที่สรุป: ${thaiDate}\n` +
+           `- ระยะเวลาสนทนา: ${timeRange}\n` +
+           `- จำนวนข้อความ: ${messages.length} ข้อความ\n` +
+           `- ผู้เข้าร่วม: ${uniqueUsers.length} คน (${uniqueUsers.join(', ')})\n\n` +
+           `**2. สรุปภาพรวม**\n` +
+           `การสนทนาในช่วงเวลาดังกล่าวมีผู้เข้าร่วม ${uniqueUsers.length} คน จำนวน ${messages.length} ข้อความ ` +
+           `หัวข้อหลักที่พูดถึงคือ ${topKeywords || 'ไม่สามารถระบุได้'}\n\n` +
+           `**3. ตัวอย่างข้อความสำคัญ**\n` +
+           `${sampleMsgs.join('\n')}\n\n` +
+           `**4. ข้อสรุป**\n` +
+           `⚠️ *หมายเหตุ: นี่คือสรุปโดยระบบสำรอง เนื่องจาก AI หลักไม่พร้อมใช้งาน*\n` +
+           `**แนะนำให้ใช้ฟังก์ชันสรุปอีกครั้งภายหลัง**`;
 }
 
 async function createSummaryTable() {
@@ -732,6 +767,27 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         const { room_id, message_count = 100, custom_instruction, start_date, end_date } = req.body;
         if (!room_id) return res.status(400).json({ success: false, error: 'กรุณาระบุ room_id' });
 
+        // ✅ เพิ่ม Rate Limit Check
+        if (!checkRateLimit(req.user.user_id)) {
+            return res.status(429).json({ 
+                success: false, 
+                error: 'สรุปข้อความได้ 10 ครั้งต่อชั่วโมง กรุณารอ 1 ชั่วโมงแล้วลองใหม่' 
+            });
+        }
+
+        // ✅ เพิ่ม Cache Check
+        const cacheKey = `${room_id}_${message_count}_${start_date || ''}_${end_date || ''}`;
+        const cachedSummary = summaryCache.get(cacheKey);
+        
+        if (cachedSummary && (Date.now() - cachedSummary.timestamp) < CACHE_DURATION) {
+            console.log('✅ Using cached summary for room:', room_id);
+            return res.json({ 
+                success: true, 
+                summary: cachedSummary.data,
+                from_cache: true 
+            });
+        }
+
         const membershipResult = await client.query('SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2', [room_id, req.user.user_id]);
         if (membershipResult.rows.length === 0) return res.status(403).json({ success: false, error: 'คุณไม่มีสิทธิ์เข้าถึงห้องนี้' });
 
@@ -771,35 +827,50 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
             timeZone: 'Asia/Bangkok'
         }).format(_now);
 
-        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล จงสรุปการสนทนาต่อไปนี้
+        // ✅ ใช้ Prompt ที่ปรับปรุงใหม่
+        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล จงวิเคราะห์และสรุปการสนทนาต่อไปนี้เป็นภาษาไทยที่สละสลวย เข้าใจง่าย
 
-**การสนทนา:**
+**บทสนทนา:**
 ${formattedMessages}
 
 ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}
----
-จงสรุปเป็นภาษาไทย โดยใช้รูปแบบนี้เท่านั้น ห้ามเพิ่มหัวข้ออื่นเด็ดขาด:
 
-**1. 📋 ข้อมูลทั่วไป**
+**คำสั่ง:** กรุณาสรุปเป็นภาษาไทยให้ครบทุกหัวข้อต่อไปนี้ โดยใช้รูปแบบที่กำหนดเท่านั้น:
+
+---
+
+**📋 สรุปการสนทนา**
+
+**1. ข้อมูลทั่วไป**
 - ห้องสนทนา: ${roomName}
-- วันที่สร้างรายงาน: ${_thaiDate} เวลา ${_thaiTime} น.
-- จำนวนข้อความ: ${messages.length} ข้อความ (${actualTimeframe})
+- วันที่สรุป: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+- ระยะเวลาสนทนา: ${actualTimeframe}
+- จำนวนข้อความ: ${messages.length} ข้อความ
 - ผู้เข้าร่วม: ${participants.join(', ')}
 
-**2. 📌 สรุปภาพรวม**
-(เขียน 2-3 ประโยค สรุปเรื่องที่คุยกันโดยรวม กระชับ ตรงประเด็น ห้ามคัดลอกบทสนทนา)
+**2. สรุปภาพรวม**
+(สรุปเนื้อหาการสนทนาโดยรวม 2-3 ประโยค)
 
-**3. 🗣️ ประเด็นสำคัญ**
+**3. ประเด็นสำคัญ**
 - (ประเด็นที่ 1)
 - (ประเด็นที่ 2)
-(สรุปเนื้อหาสำคัญเป็นข้อๆ ไม่เกิน 7 ข้อ ห้ามคัดลอกบทสนทนา เขียนสรุปย่อเท่านั้น)
+- (ประเด็นที่ 3)
+(สรุปเป็นข้อๆ ไม่เกิน 7 ข้อ)
 
-**4. ✅ สิ่งที่ต้องทำ (Action Items)**
-| เรื่อง | ผู้รับผิดชอบ | กำหนดแล้วเสร็จ |
-|-------|-------------|----------------|
-| (งาน) | (ชื่อหรือตำแหน่ง) | (วันที่ หรือ ไม่ระบุ) |
+**4. ข้อสรุปและมติที่ประชุม**
+(สรุปข้อตกลงหรือมติสำคัญที่ได้จากการสนทนา)
 
-ถ้าไม่มี Action Items ให้เขียนว่า: ไม่มีงานที่ต้องดำเนินการเพิ่มเติม`;
+**5. งานที่ต้องดำเนินการต่อ**
+| เรื่อง | ผู้รับผิดชอบ | กำหนดแล้วเสร็จ | หมายเหตุ |
+|-------|-------------|----------------|----------|
+| (รายละเอียดงาน) | (ชื่อผู้รับผิดชอบ) | (วันที่) | (ถ้ามี) |
+
+**6. ข้อเสนอแนะ**
+(ข้อเสนอแนะสำหรับการสนทนาครั้งต่อไป)
+
+---
+
+**รูปแบบการตอบ:** ให้ตอบเฉพาะเนื้อหาตามหัวข้อข้างต้นเท่านั้น ไม่ต้องมีคำนำหรือคำสรุปเพิ่มเติม`;
 
         let summary;
         const apiKey = process.env.GEMINI_API_KEY;
@@ -810,6 +881,13 @@ ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${
                 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 3000 } });
                 const result = await model.generateContent(prompt);
                 summary = result.response.text();
+                
+                // ✅ บันทึก summary ลง cache
+                summaryCache.set(cacheKey, {
+                    data: summary,
+                    timestamp: Date.now()
+                });
+                
             } catch (aiError) {
                 console.error('❌ Gemini Error:', aiError.message);
                 summary = createFallbackSummary(messages, roomName);
@@ -818,12 +896,26 @@ ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${
 
         const summaryId = `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
-            await client.query(`INSERT INTO chat_summary_new (summary_id, chat_content, summary, created_at) VALUES ($1, $2, $3, NOW())`, [summaryId, formattedMessages, summary]);
+            // ✅ เพิ่ม room_id ใน chat_content เพื่อให้ค้นหาได้
+            const chatContentWithRoomId = `room_id:${room_id}\n${formattedMessages}`;
+            await client.query(`INSERT INTO chat_summary_new (summary_id, chat_content, summary, created_at) VALUES ($1, $2, $3, NOW())`, [summaryId, chatContentWithRoomId, summary]);
         } catch (dbError) {
             console.warn('⚠️ ไม่สามารถบันทึก:', dbError.message);
         }
 
-        res.json({ success: true, summary, summary_id: summaryId, report_url: `/report?id=${summaryId}&room_id=${room_id}`, stats: { room_id, room_name: roomName, message_count: messages.length, timeframe: actualTimeframe, date: firstMsg.date } });
+        res.json({ 
+            success: true, 
+            summary, 
+            summary_id: summaryId, 
+            report_url: `/report?id=${summaryId}&room_id=${room_id}`, 
+            stats: { 
+                room_id, 
+                room_name: roomName, 
+                message_count: messages.length, 
+                timeframe: actualTimeframe, 
+                date: firstMsg.date 
+            } 
+        });
     } catch (error) {
         console.error('❌ Summary Error:', error);
         res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาดในการสรุป' });
@@ -863,7 +955,65 @@ app.post('/api/chat-summary/save', authenticateToken, async (req, res) => {
         if (client) client.release();
     }
 });
+app.get('/api/chat-summary/room/:roomId', authenticateToken, async (req, res) => {
+    const client = await getConnection();
+    try {
+        const { roomId } = req.params;
+        const { limit = 5 } = req.query;
+        
+        // ตรวจสอบสิทธิ์
+        const membershipResult = await client.query(
+            'SELECT * FROM room_members WHERE room_id = $1 AND user_id = $2',
+            [roomId, req.user.user_id]
+        );
+        if (membershipResult.rows.length === 0) {
+            return res.status(403).json({ success: false, error: 'ไม่มีสิทธิ์เข้าถึง' });
+        }
 
+        // ดึงประวัติสรุปของห้องนี้
+        const summariesResult = await client.query(`
+            SELECT id, summary_id, summary as summary_text, created_at 
+            FROM chat_summary_new 
+            WHERE chat_content LIKE $1 
+            ORDER BY created_at DESC 
+            LIMIT $2
+        `, [`%room_id:${roomId}%`, parseInt(limit)]);
+
+        res.json({ 
+            success: true, 
+            summaries: summariesResult.rows 
+        });
+    } catch (error) {
+        console.error('❌ Get room summaries error:', error);
+        res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาด' });
+    } finally {
+        if (client) client.release();
+    }
+});
+
+// ⚡ เพิ่ม API ลบสรุป
+app.delete('/api/chat-summary/:summaryId', authenticateToken, async (req, res) => {
+    const client = await getConnection();
+    try {
+        const { summaryId } = req.params;
+        
+        const result = await client.query(
+            'DELETE FROM chat_summary_new WHERE summary_id = $1 RETURNING id',
+            [summaryId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'ไม่พบข้อมูลสรุป' });
+        }
+        
+        res.json({ success: true, message: 'ลบสรุปสำเร็จ' });
+    } catch (error) {
+        console.error('❌ Delete summary error:', error);
+        res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาด' });
+    } finally {
+        if (client) client.release();
+    }
+});
 app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
     const client = await getConnection();
     try {
@@ -886,7 +1036,30 @@ app.get('/api/chat-summary/details', authenticateToken, async (req, res) => {
         if (client) client.release();
     }
 });
+// ========================================
+// AI Summary Cache System
+// ========================================
+const summaryCache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 นาที
 
+// Rate limiting
+const rateLimit = new Map();
+
+function checkRateLimit(userId) {
+    const now = Date.now();
+    const userLimits = rateLimit.get(userId) || [];
+    
+    // ลบรายการที่เกิน 1 ชั่วโมง
+    const recentLimits = userLimits.filter(time => now - time < 60 * 60 * 1000);
+    
+    if (recentLimits.length >= 10) { // จำกัด 10 ครั้งต่อชั่วโมง
+        return false;
+    }
+    
+    recentLimits.push(now);
+    rateLimit.set(userId, recentLimits);
+    return true;
+}
 // ========================================
 // Socket.IO
 // ========================================

@@ -1121,7 +1121,7 @@
     </div>
 
   
-    <!-- Scripts -->
+       <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="/assets/js/chat.js"></script>
     <script>
@@ -1180,8 +1180,7 @@
                         }
                         
                         // สร้างสรุปตัวอย่าง (สำหรับการทดสอบ)
-                        const mockSummary = `
-# สรุปการสนทนา - ${this.currentRoom.room_name}
+                        const mockSummary = `# สรุปการสนทนา - ${this.currentRoom.room_name}
 
 **วันที่:** ${new Date().toLocaleDateString('th-TH')}
 **เวลา:** ${new Date().toLocaleTimeString('th-TH')}
@@ -1208,18 +1207,21 @@
 
 ---
 
-*สรุปโดยระบบ AI - สำหรับการใช้งานจริงต้องเชื่อมต่อกับ Gemini API*
-                        `;
+*สรุปโดยระบบ AI - สำหรับการใช้งานจริงต้องเชื่อมต่อกับ Gemini API*`;
                         
                         // แสดง modal
                         this.createAndShowSummaryModal(mockSummary);
                     };
                     
-                    // เพิ่มฟังก์ชันแสดง modal
+                    // ✅ เพิ่มฟังก์ชันแสดง modal (แก้ไขแล้ว)
                     window.chatApp.createAndShowSummaryModal = function(summaryText) {
                         // ลบ modal เก่าถ้ามี
                         const oldModal = document.getElementById('aiSummaryModal');
                         if (oldModal) oldModal.remove();
+                        
+                        // เก็บ reference ไว้ใช้ใน event listeners
+                        const app = window.chatApp;
+                        const currentRoom = this.currentRoom;
                         
                         // สร้าง modal ใหม่
                         const modal = document.createElement('div');
@@ -1233,39 +1235,37 @@
                                 </div>
                                 <div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding: 20px;">
                                     <div class="summary-info" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                                        <p><strong>ห้อง:</strong> ${this.currentRoom.room_name}</p>
+                                        <p><strong>ห้อง:</strong> ${currentRoom?.room_name || 'ไม่ระบุห้อง'}</p>
                                         <p><strong>วันที่:</strong> ${new Date().toLocaleDateString('th-TH')}</p>
                                         <p><strong>เวลา:</strong> ${new Date().toLocaleTimeString('th-TH')}</p>
                                         <p><strong>หมายเหตุ:</strong> นี่เป็นตัวอย่างสรุปสำหรับการทดสอบ</p>
                                     </div>
                                     <div class="summary-text" style="white-space: pre-line; line-height: 1.6;">
                                         ${summaryText}
-                </div>
-            </div>
-            <!-- ✅ ✅ ✅ แก้ส่วน footer ให้มีปุ่มสรุปผลรายงานอยู่ระดับเดียวกัน ✅ ✅ ✅ -->
-            <div class="summary-actions" style="padding: 15px 25px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
-                <button class="btn-secondary close-modal" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-times"></i> ปิด
-                </button>
-                <button id="copySummaryBtn" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-copy"></i> คัดลอก
-                </button>
-                <button id="saveSummaryBtn" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-save"></i> บันทึก
-                </button>
-                <!-- ✅ ปุ่มสรุปผลรายงาน อยู่ในแถวเดียวกัน ✅ -->
-                <button id="openReportBtn" style="padding: 10px 20px; background: #9b59b6; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-file-alt"></i> สรุปผลรายงาน
-                </button>
-            </div>
-            <!-- ✅ ข้อความช่วยเหลือเล็กน้อยด้านล่าง (optional) -->
-            <div style="padding: 0 25px 15px 25px; text-align: center;">
-                <small class="text-muted" style="font-size: 12px; color: #7f8c8d;">
-                    <i class="fas fa-info-circle"></i> รายงานจะแสดงในรูปแบบมืออาชีพ พร้อมพิมพ์เป็นเอกสาร A4
-                </small>
-            </div>
-        </div>
-    `;    
+                                    </div>
+                                </div>
+                                <div class="summary-actions" style="padding: 15px 25px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                                    <button class="btn-secondary close-modal" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-times"></i> ปิด
+                                    </button>
+                                    <button id="copySummaryBtn" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-copy"></i> คัดลอก
+                                    </button>
+                                    <button id="saveSummaryBtn" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-save"></i> บันทึก
+                                    </button>
+                                    <button id="openReportBtn" style="padding: 10px 20px; background: #9b59b6; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-file-alt"></i> สรุปผลรายงาน
+                                    </button>
+                                </div>
+                                <div style="padding: 0 25px 15px 25px; text-align: center;">
+                                    <small class="text-muted" style="font-size: 12px; color: #7f8c8d;">
+                                        <i class="fas fa-info-circle"></i> รายงานจะแสดงในรูปแบบมืออาชีพ พร้อมพิมพ์เป็นเอกสาร A4
+                                    </small>
+                                </div>
+                            </div>
+                        `;
+                        
                         document.body.appendChild(modal);
                         
                         // เพิ่ม event listeners
@@ -1285,7 +1285,6 @@
                                 alert('คัดลอกสรุปแล้ว!');
                             }).catch(err => {
                                 console.error('Copy failed:', err);
-                                // Fallback
                                 const textarea = document.createElement('textarea');
                                 textarea.value = summaryText;
                                 document.body.appendChild(textarea);
@@ -1300,13 +1299,39 @@
                         document.getElementById('saveSummaryBtn').addEventListener('click', () => {
                             alert('บันทึกสรุปแล้ว (สำหรับการทดสอบ)');
                         });
-                         document.getElementById('openReportBtn').addEventListener('click', () => {
-                            // เปิดหน้า report.html พร้อมส่งข้อมูล
-                            this.openReportPage(summaryText);
+                        
+                        // ✅ ปุ่มเปิดรายงาน - แก้ไขแล้ว
+                        document.getElementById('openReportBtn').addEventListener('click', () => {
+                            if (app && app.openReportPage) {
+                                app.openReportPage(summaryText, currentRoom);
+                            } else {
+                                alert('ไม่สามารถเปิดหน้ารายงานได้ กรุณาลองใหม่อีกครั้ง');
+                            }
                         });
                     };
                     
-                }
+                    // ✅ เพิ่มฟังก์ชันเปิดหน้ารายงาน (ตรงนี้)
+                    window.chatApp.openReportPage = function(summaryText, roomData) {
+                        try {
+                            const room = roomData || this.currentRoom;
+                            const reportData = {
+                                summary: summaryText,
+                                room_name: room?.room_name || 'ไม่ระบุห้อง',
+                                room_id: room?.room_id || null,
+                                date: new Date().toLocaleDateString('th-TH'),
+                                time: new Date().toLocaleTimeString('th-TH')
+                            };
+                            sessionStorage.setItem('reportData', JSON.stringify(reportData));
+                            window.open('/report', '_blank');
+                        } catch (error) {
+                            console.error('❌ เปิดหน้ารายงานผิดพลาด:', error);
+                            if (this.showNotification) {
+                                this.showNotification('ผิดพลาด', 'ไม่สามารถเปิดหน้ารายงานได้', 'error');
+                            }
+                        }
+                    };
+                    
+                } // ปิด if (window.chatApp)
             }, 1000); // รอ 1 วินาทีให้ระบบโหลดเสร็จ
             
         } catch (error) {
@@ -1332,8 +1357,10 @@
                 `;
             }
         }
-    });
+    }); // ปิด document.addEventListener
 
+    // ฟังก์ชันอื่นๆ (อยู่นอก document.addEventListener)
+    
     // เพิ่มฟังก์ชันสำหรับเปิด/ปิด sidebar บนมือถือ
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
@@ -1345,210 +1372,195 @@
         }
     }
     
-   
-    
-   
     // ✅ วิธีแก้ไขง่ายสุด: ใช้ MutationObserver ติดตามการเปลี่ยนชื่อห้อง
-setTimeout(() => {
-    const currentRoomName = document.getElementById('currentRoomName');
-    
-    if (currentRoomName) {
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'characterData' || mutation.type === 'childList') {
-                    const roomName = currentRoomName.textContent;
-                    const aiSummaryBtn = document.getElementById('aiSummaryBtn');
-                    
-                    if (aiSummaryBtn) {
-                        // ถ้าชื่อห้องไม่ใช่ "เลือกห้องสนทนา" แสดงปุ่ม AI Summary
-                        if (roomName && roomName !== 'เลือกห้องสนทนา' && roomName !== '') {
-                            aiSummaryBtn.style.display = 'flex';
-                        } else {
-                            aiSummaryBtn.style.display = 'none';
+    setTimeout(() => {
+        const currentRoomName = document.getElementById('currentRoomName');
+        
+        if (currentRoomName) {
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'characterData' || mutation.type === 'childList') {
+                        const roomName = currentRoomName.textContent;
+                        const aiSummaryBtn = document.getElementById('aiSummaryBtn');
+                        
+                        if (aiSummaryBtn) {
+                            if (roomName && roomName !== 'เลือกห้องสนทนา' && roomName !== '') {
+                                aiSummaryBtn.style.display = 'flex';
+                            } else {
+                                aiSummaryBtn.style.display = 'none';
+                            }
                         }
                     }
-                }
+                });
             });
-        });
-        
-        observer.observe(currentRoomName, {
-            childList: true,
-            characterData: true,
-            subtree: true
-        });
-        
-        // ตรวจสอบครั้งแรก
-        const initialRoomName = currentRoomName.textContent;
-        const aiSummaryBtn = document.getElementById('aiSummaryBtn');
-        if (aiSummaryBtn && initialRoomName && initialRoomName !== 'เลือกห้องสนทนา') {
-            aiSummaryBtn.style.display = 'flex';
+            
+            observer.observe(currentRoomName, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
+            
+            const initialRoomName = currentRoomName.textContent;
+            const aiSummaryBtn = document.getElementById('aiSummaryBtn');
+            if (aiSummaryBtn && initialRoomName && initialRoomName !== 'เลือกห้องสนทนา') {
+                aiSummaryBtn.style.display = 'flex';
+            }
         }
-    }
-}, 1500);
-// ✅ เพิ่มฟังก์ชันจัดการ scroll อย่างชาญฉลาด
-function setupSmartScroll() {
-    const messagesList = document.getElementById('messagesList');
-    if (!messagesList) return;
+    }, 1500);
     
-    let isAtBottom = true;
-    let lastMessageCount = 0;
-    
-    // ตรวจสอบตำแหน่ง scroll
-    messagesList.addEventListener('scroll', () => {
-        const threshold = 100; // pixels from bottom
-        isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight <= threshold;
-    });
-    
-    // ใช้ MutationObserver เพื่อตรวจจับการเปลี่ยนแปลง
-    const observer = new MutationObserver((mutations) => {
-        const currentMessageCount = messagesList.querySelectorAll('.message').length;
+    // ✅ เพิ่มฟังก์ชันจัดการ scroll อย่างชาญฉลาด
+    function setupSmartScroll() {
+        const messagesList = document.getElementById('messagesList');
+        if (!messagesList) return;
         
-        // ถ้ามีข้อความเพิ่มและอยู่ด้านล่าง ให้ scroll
-        if (currentMessageCount > lastMessageCount && isAtBottom) {
+        let isAtBottom = true;
+        let lastMessageCount = 0;
+        
+        messagesList.addEventListener('scroll', () => {
+            const threshold = 100;
+            isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight <= threshold;
+        });
+        
+        const observer = new MutationObserver((mutations) => {
+            const currentMessageCount = messagesList.querySelectorAll('.message').length;
+            
+            if (currentMessageCount > lastMessageCount && isAtBottom) {
+                requestAnimationFrame(() => {
+                    scrollToBottom(messagesList);
+                });
+            }
+            
+            lastMessageCount = currentMessageCount;
+        });
+        
+        observer.observe(messagesList, {
+            childList: true,
+            subtree: false
+        });
+    }
+
+    // ✅ ฟังก์ชัน scroll ไปด้านล่าง
+    function scrollToBottom(element) {
+        element.scrollTop = element.scrollHeight;
+    }
+
+    // ✅ ฟังก์ชันเพิ่มข้อความแบบไม่ทำให้ layout shift
+    function addMessageOptimistic(messageData) {
+        const messagesList = document.getElementById('messagesList');
+        if (!messagesList) return null;
+        
+        const welcomeMessage = messagesList.querySelector('.welcome-message');
+        if (welcomeMessage) welcomeMessage.remove();
+        
+        const emptyChat = messagesList.querySelector('.empty-chat');
+        if (emptyChat) emptyChat.remove();
+        
+        const tempId = 'temp_' + Date.now();
+        messageData.message_id = tempId;
+        
+        const messageElement = createMessageElement(messageData);
+        messageElement.classList.add('temp-message');
+        
+        messagesList.appendChild(messageElement);
+        
+        const isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight <= 100;
+        if (isAtBottom) {
             requestAnimationFrame(() => {
                 scrollToBottom(messagesList);
             });
         }
         
-        lastMessageCount = currentMessageCount;
-    });
-    
-    observer.observe(messagesList, {
-        childList: true,
-        subtree: false
-    });
-}
-
-// ✅ ฟังก์ชัน scroll ไปด้านล่าง
-function scrollToBottom(element) {
-    element.scrollTop = element.scrollHeight;
-}
-
-// ✅ ฟังก์ชันเพิ่มข้อความแบบไม่ทำให้ layout shift
-function addMessageOptimistic(messageData) {
-    const messagesList = document.getElementById('messagesList');
-    if (!messagesList) return null;
-    
-    // ลบ welcome message ถ้ามี
-    const welcomeMessage = messagesList.querySelector('.welcome-message');
-    if (welcomeMessage) welcomeMessage.remove();
-    
-    const emptyChat = messagesList.querySelector('.empty-chat');
-    if (emptyChat) emptyChat.remove();
-    
-    // สร้างข้อความชั่วคราว
-    const tempId = 'temp_' + Date.now();
-    messageData.message_id = tempId;
-    
-    // สร้าง message element
-    const messageElement = createMessageElement(messageData);
-    messageElement.classList.add('temp-message');
-    
-    // เพิ่มข้อความ
-    messagesList.appendChild(messageElement);
-    
-    // Scroll ถ้าอยู่ด้านล่าง
-    const isAtBottom = messagesList.scrollHeight - messagesList.scrollTop - messagesList.clientHeight <= 100;
-    if (isAtBottom) {
-        requestAnimationFrame(() => {
-            scrollToBottom(messagesList);
-        });
+        return tempId;
     }
-    
-    return tempId;
-}
 
-
-
-// ✅ แก้ไข event listener สำหรับการส่งข้อความ
-document.addEventListener('DOMContentLoaded', function() {
-    // ... existing code ...
-    
-    // ตั้งค่า scroll behavior
-    setTimeout(() => {
-        setupSmartScroll();
-    }, 1000);
-    
-    // แก้ไข event listener ของ textarea
-    const messageInput = document.getElementById('messageInput');
-    if (messageInput) {
-        // ลบ event listener เก่าทั้งหมด
-        const newMessageInput = messageInput.cloneNode(true);
-        messageInput.parentNode.replaceChild(newMessageInput, messageInput);
+    // ✅ แก้ไข event listener สำหรับการส่งข้อความ
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            setupSmartScroll();
+        }, 1000);
         
-        // เพิ่ม event listener ใหม่
-        newMessageInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-            }
-        });
-        
-        newMessageInput.addEventListener('input', function() {
-            // Auto-resize
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            const newMessageInput = messageInput.cloneNode(true);
+            messageInput.parentNode.replaceChild(newMessageInput, messageInput);
             
-            // Character count
-            const count = this.value.length;
-            document.getElementById('characterCount').textContent = `${count}/1000`;
-        });
-    }
-    
-   const sendBtn = document.getElementById('sendMessageBtn');
-if (sendBtn) {
-    sendBtn.onclick = () => {
-        if (window.chatApp) {
-            window.chatApp.handleSendMessage();
+            newMessageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.chatApp && window.chatApp.handleSendMessage) {
+                        window.chatApp.handleSendMessage();
+                    }
+                }
+            });
+            
+            newMessageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                const count = this.value.length;
+                const charCount = document.getElementById('characterCount');
+                if (charCount) {
+                    charCount.textContent = `${count}/1000`;
+                }
+            });
         }
-    };
-}
-});
-function showErrorNotification(message) {
-    const toast = document.getElementById('notificationToast');
-    if (!toast) return;
-    
-    const toastTitle = document.getElementById('toastTitle');
-    const toastMessage = document.getElementById('toastMessage');
-    
-    if (toastTitle) toastTitle.innerHTML = `<i class="fas fa-exclamation-circle"></i> ข้อผิดพลาด`;
-    if (toastMessage) toastMessage.textContent = message;
-    
-    toast.classList.add('show');
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
-}
-</script>
+        
+        const sendBtn = document.getElementById('sendMessageBtn');
+        if (sendBtn) {
+            sendBtn.onclick = function() {
+                if (window.chatApp && window.chatApp.handleSendMessage) {
+                    window.chatApp.handleSendMessage();
+                }
+            };
+        }
+    });
+
+    function showErrorNotification(message) {
+        const toast = document.getElementById('notificationToast');
+        if (!toast) return;
+        
+        const toastTitle = document.getElementById('toastTitle');
+        const toastMessage = document.getElementById('toastMessage');
+        
+        if (toastTitle) toastTitle.innerHTML = `<i class="fas fa-exclamation-circle"></i> ข้อผิดพลาด`;
+        if (toastMessage) toastMessage.textContent = message;
+        
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+    </script>
+
     <!-- Emoji Picker Modal -->
-<div id="emojiPickerModal" class="emoji-modal">
-    <div class="emoji-modal-content">
-        <div class="emoji-header">
-            <h4>เลือกอิโมจิ</h4>
-            <button class="close-emoji-modal">&times;</button>
-        </div>
-        
-        <div class="emoji-search">
-            <input type="text" id="emojiSearch" placeholder="ค้นหาอิโมจิ...">
-        </div>
-        
-        <div class="emoji-categories">
-            <button class="emoji-category-btn active" data-category="smileys" title="หน้ายิ้ม">😀</button>
-            <button class="emoji-category-btn" data-category="gestures" title="ท่าทาง">👋</button>
-            <button class="emoji-category-btn" data-category="animals" title="สัตว์">🐶</button>
-            <button class="emoji-category-btn" data-category="food" title="อาหาร">🍕</button>
-            <button class="emoji-category-btn" data-category="travel" title="ท่องเที่ยว">✈️</button>
-            <button class="emoji-category-btn" data-category="activities" title="กิจกรรม">⚽</button>
-            <button class="emoji-category-btn" data-category="objects" title="สิ่งของ">💡</button>
-            <button class="emoji-category-btn" data-category="symbols" title="สัญลักษณ์">❤️</button>
-        </div>
-        
-        <div id="emojiGrid" class="emoji-grid">
-            <!-- Emojis will be loaded here -->
+    <div id="emojiPickerModal" class="emoji-modal">
+        <div class="emoji-modal-content">
+            <div class="emoji-header">
+                <h4>เลือกอิโมจิ</h4>
+                <button class="close-emoji-modal">&times;</button>
+            </div>
+            
+            <div class="emoji-search">
+                <input type="text" id="emojiSearch" placeholder="ค้นหาอิโมจิ...">
+            </div>
+            
+            <div class="emoji-categories">
+                <button class="emoji-category-btn active" data-category="smileys" title="หน้ายิ้ม">😀</button>
+                <button class="emoji-category-btn" data-category="gestures" title="ท่าทาง">👋</button>
+                <button class="emoji-category-btn" data-category="animals" title="สัตว์">🐶</button>
+                <button class="emoji-category-btn" data-category="food" title="อาหาร">🍕</button>
+                <button class="emoji-category-btn" data-category="travel" title="ท่องเที่ยว">✈️</button>
+                <button class="emoji-category-btn" data-category="activities" title="กิจกรรม">⚽</button>
+                <button class="emoji-category-btn" data-category="objects" title="สิ่งของ">💡</button>
+                <button class="emoji-category-btn" data-category="symbols" title="สัญลักษณ์">❤️</button>
+            </div>
+            
+            <div id="emojiGrid" class="emoji-grid">
+                <!-- Emojis will be loaded here -->
+            </div>
         </div>
     </div>
-</div>
-<script src="/assets/js/mobile-init.js"></script>
+    
+    <script src="/assets/js/mobile-init.js"></script>
 </body>
 </html>

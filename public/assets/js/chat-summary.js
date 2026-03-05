@@ -2,6 +2,10 @@
 // Chat Summary AI Module (ฉบับปรับปรุง)
 // เปลี่ยนจากสรุปด้วย keyword matching เป็นส่งให้ Gemini ผ่าน /api/chat-summary
 // =====================================================================
+// =====================================================================
+// Chat Summary AI Module (ฉบับปรับปรุง)
+// เปลี่ยนจากสรุปด้วย keyword matching เป็นส่งให้ Gemini ผ่าน /api/chat-summary
+// =====================================================================
 class ChatSummaryAI {
     constructor() {
         this.isSummarizing = false;
@@ -60,32 +64,15 @@ class ChatSummaryAI {
 
             console.log('✅ ได้รับผลสรุปจาก Gemini แล้ว');
 
-            // ส่งผลกลับในรูปแบบที่ chat app ใช้งาน
+            // ✅ ปรับโครงสร้างให้ตรงกับที่ chat.js ใช้
             return {
                 success: true,
-                summary: {
-                    // raw text จาก Gemini (มี markdown **หัวข้อ** และ - bullet)
-                    raw: data.summary,
-
-                    // ข้อมูลสำหรับแสดงใน UI
-                    overview:    this._extractSection(data.summary, '1.', '2.'),
-                    key_points:  this._extractBullets(data.summary, '2.', '3.'),
-                    appointments: this._extractBullets(data.summary, '3.', '4.'),
-                    action_items: this._extractBullets(data.summary, '4.', '5.'),
-                    pending:     this._extractBullets(data.summary, '5.', '6.'),
-                    medical:     this._extractBullets(data.summary, '6.', '7.'),
-                    stats:       this._extractSection(data.summary, '7.', null),
-
-                    // ใช้สำหรับแสดงใน summary modal (เดิม)
-                    summary_text: data.summary,
-                    actions:      []
-                },
-                metadata: {
-                    generated_at:    new Date().toISOString(),
-                    message_count:   data.stats?.message_count || validMessages.length,
-                    summary_id:      data.summary_id,
-                    report_url:      data.report_url,
-                    timeframe:       data.stats?.timeframe || ''
+                summary: data.summary, // raw text จาก Gemini
+                summary_id: data.summary_id,
+                report_url: data.report_url,
+                stats: data.stats || {
+                    message_count: validMessages.length,
+                    timeframe: this.calculateTimeRange(messages)
                 }
             };
 
@@ -98,47 +85,9 @@ class ChatSummaryAI {
     }
 
     // =====================================================================
-    // Helper: ดึง section จาก markdown text
+    // Helper functions (ไว้ใช้ในกรณี fallback)
     // =====================================================================
-    _extractSection(text, startMarker, endMarker) {
-        if (!text) return '';
-        const lines = text.split('\n');
-        let capturing = false;
-        const result = [];
-
-        for (const line of lines) {
-            const isStart = startMarker && line.includes(startMarker);
-            const isEnd   = endMarker   && line.includes(endMarker);
-
-            if (isStart) { capturing = true; continue; }
-            if (isEnd && capturing) break;
-            if (capturing) result.push(line);
-        }
-
-        return result
-            .join('\n')
-            .replace(/\*\*(.*?)\*\*/g, '$1')  // ลบ bold markdown
-            .trim();
-    }
-
-    // =====================================================================
-    // Helper: ดึง bullet list จาก section
-    // =====================================================================
-    _extractBullets(text, startMarker, endMarker) {
-        const section = this._extractSection(text, startMarker, endMarker);
-        if (!section) return [];
-
-        return section
-            .split('\n')
-            .filter(line => line.trim().startsWith('-') || line.trim().startsWith('•'))
-            .map(line => line.replace(/^[-•]\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1').trim())
-            .filter(line => line.length > 0);
-    }
-
-    // =====================================================================
-    // ฟังก์ชันเหล่านี้คงไว้เพื่อ backward compatibility
-    // (บางส่วนของ chat app อาจยังเรียกใช้)
-    // =====================================================================
+    
     validateMessages(messages) {
         if (!messages || !Array.isArray(messages) || messages.length < 3) return false;
         const valid = messages.filter(m => m.message_text?.trim() && m.message_type === 'text');
@@ -167,6 +116,34 @@ class ChatSummaryAI {
 
     generateCacheKey(messages, roomInfo) {
         return `${roomInfo?.room_id}-${messages.length}`;
+    }
+
+    // ✅ ฟังก์ชันสำหรับ fallback เมื่อ API ล้มเหลว
+    createFallbackSummary(messages, roomName) {
+        const uniqueUsers = [...new Set(messages.map(m => m.full_name))];
+        const timeRange = this.calculateTimeRange(messages);
+        
+        const now = new Date();
+        const thaiDate = now.toLocaleDateString('th-TH', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        
+        return `📋 สรุปการสนทนา (ระบบสำรอง) - ${roomName}
+
+**1. ข้อมูลทั่วไป**
+- ห้องสนทนา: ${roomName}
+- วันที่สรุป: ${thaiDate}
+- ระยะเวลาสนทนา: ${timeRange}
+- จำนวนข้อความ: ${messages.length} ข้อความ
+- ผู้เข้าร่วม: ${uniqueUsers.length} คน
+
+**2. สรุปภาพรวม**
+ไม่สามารถเชื่อมต่อกับระบบ AI ได้ในขณะนี้
+
+**3. ข้อสรุป**
+⚠️ *หมายเหตุ: นี่คือสรุปโดยระบบสำรอง กรุณาลองใหม่อีกครั้งภายหลัง*`;
     }
 }
 
