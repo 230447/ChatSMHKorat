@@ -756,6 +756,9 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         const firstMsg = sortedMessages[0], lastMsg = sortedMessages[sortedMessages.length - 1];
         const actualTimeframe = `${firstMsg.date} ${firstMsg.time} - ${lastMsg.date} ${lastMsg.time}`;
 
+        // รายชื่อผู้เข้าร่วมทั้งหมด
+        const participants = [...new Set(sortedMessages.map(msg => msg.full_name))];
+
         // วันที่/เวลาภาษาไทย พุทธศักราช
         const _now = new Date();
         const _buddhistYear = _now.getFullYear() + 543;
@@ -768,33 +771,35 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
             timeZone: 'Asia/Bangkok'
         }).format(_now);
 
-        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล
-
-**ข้อมูลห้อง:** ${roomName} (${messages.length} ข้อความ ช่วง ${actualTimeframe})
-**วันที่/เวลาที่สรุป:** ${_thaiDate} เวลา ${_thaiTime} น.
+        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล จงสรุปการสนทนาต่อไปนี้
 
 **การสนทนา:**
 ${formattedMessages}
 
-${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}สรุปการสนทนาเฉพาะ 3 ส่วนต่อไปนี้เท่านั้น ห้ามเพิ่มหัวข้ออื่น:
-
-**1. 📋 สรุปภาพรวม**
-เขียนสรุปเรื่องที่คุยกันโดยรวม 2-3 ประโยค กระชับ ชัดเจน ใช้ภาษาเป็นทางการ
-
-**2. 🎯 ประเด็นสำคัญ**
-- [ประเด็นที่ 1]
-- [ประเด็นที่ 2]
-(สรุปเนื้อหาสำคัญเป็นข้อๆ ไม่เกิน 7 ข้อ)
-
-**3. ✅ สิ่งที่ต้องทำ (Action Items)**
-| เรื่อง | ผู้รับผิดชอบ | กำหนดแล้วเสร็จ | สถานะ |
-|-------|-------------|----------------|--------|
-| [งาน] | [ชื่อหรือตำแหน่ง] | [วันที่ หรือ ไม่ระบุ] | [⏳ กำลังดำเนินการ / ✅ เสร็จแล้ว / 🔴 ด่วน / 🔵 รอดำเนินการ] |
-
-ถ้าไม่มี Action Items ให้เขียนว่า: ไม่มีงานที่ต้องดำเนินการเพิ่มเติม
-
+${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}
 ---
-📅 สรุปโดย AI เมื่อ: ${_thaiDate} เวลา ${_thaiTime} น.`;
+จงสรุปเป็นภาษาไทย โดยใช้รูปแบบนี้เท่านั้น ห้ามเพิ่มหัวข้ออื่นเด็ดขาด:
+
+**1. 📋 ข้อมูลทั่วไป**
+- ห้องสนทนา: ${roomName}
+- วันที่สร้างรายงาน: ${_thaiDate} เวลา ${_thaiTime} น.
+- จำนวนข้อความ: ${messages.length} ข้อความ (${actualTimeframe})
+- ผู้เข้าร่วม: ${participants.join(', ')}
+
+**2. 📌 สรุปภาพรวม**
+(เขียน 2-3 ประโยค สรุปเรื่องที่คุยกันโดยรวม กระชับ ตรงประเด็น ห้ามคัดลอกบทสนทนา)
+
+**3. 🗣️ ประเด็นสำคัญ**
+- (ประเด็นที่ 1)
+- (ประเด็นที่ 2)
+(สรุปเนื้อหาสำคัญเป็นข้อๆ ไม่เกิน 7 ข้อ ห้ามคัดลอกบทสนทนา เขียนสรุปย่อเท่านั้น)
+
+**4. ✅ สิ่งที่ต้องทำ (Action Items)**
+| เรื่อง | ผู้รับผิดชอบ | กำหนดแล้วเสร็จ |
+|-------|-------------|----------------|
+| (งาน) | (ชื่อหรือตำแหน่ง) | (วันที่ หรือ ไม่ระบุ) |
+
+ถ้าไม่มี Action Items ให้เขียนว่า: ไม่มีงานที่ต้องดำเนินการเพิ่มเติม`;
 
         let summary;
         const apiKey = process.env.GEMINI_API_KEY;
@@ -826,7 +831,6 @@ ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${
         if (client) client.release();
     }
 });
-
 app.get('/api/chat-summary/history', authenticateToken, async (req, res) => {
     const client = await getConnection();
     try {
