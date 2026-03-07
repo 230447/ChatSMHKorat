@@ -1,48 +1,44 @@
 // =====================================================================
-// Chat Summary AI Module (ฉบับปรับปรุง)
-// เปลี่ยนจากสรุปด้วย keyword matching เป็นส่งให้ Gemini ผ่าน /api/chat-summary
-// =====================================================================
-// =====================================================================
-// Chat Summary AI Module (ฉบับปรับปรุง)
-// เปลี่ยนจากสรุปด้วย keyword matching เป็นส่งให้ Gemini ผ่าน /api/chat-summary
+// Chat Summary AI Module - Client Side
+// ทำงานร่วมกับ server API /api/chat-summary
 // =====================================================================
 class ChatSummaryAI {
     constructor() {
         this.isSummarizing = false;
-        console.log('🤖 Chat Summary AI initialized (Server-side Gemini mode)');
+        console.log('🤖 Chat Summary AI initialized');
     }
 
     /**
-     * ฟังก์ชันหลัก: ส่งข้อมูลไปให้ Gemini สรุปผ่าน backend API
+     * เรียก API /api/chat-summary เพื่อสรุปข้อความ
+     * @param {Object} options - { room_id, message_count, start_date, end_date, custom_instruction }
      */
-    async summarizeConversation(messages, roomInfo) {
+    async summarize(options) {
+        // ป้องกันการเรียกซ้ำ
         if (this.isSummarizing) {
-            return { success: false, error: 'กำลังสรุปอยู่ กรุณารอสักครู่' };
+            return { 
+                success: false, 
+                error: 'กำลังสรุปอยู่ กรุณารอสักครู่',
+                isProcessing: true 
+            };
         }
 
-        // ตรวจสอบขั้นต้น
-        if (!messages || !Array.isArray(messages) || messages.length < 3) {
-            return { success: false, error: 'ข้อความไม่เพียงพอสำหรับการสรุป (ต้องการอย่างน้อย 3 ข้อความ)' };
-        }
-
-        const validMessages = messages.filter(m =>
-            m.message_text && m.message_text.trim().length > 0 && m.message_type === 'text'
-        );
-
-        if (validMessages.length < 3) {
-            return { success: false, error: 'ข้อความที่เป็นข้อความ (text) ไม่เพียงพอ' };
+        // ตรวจสอบ options
+        if (!options || !options.room_id) {
+            return { 
+                success: false, 
+                error: 'กรุณาระบุ room_id' 
+            };
         }
 
         this.isSummarizing = true;
 
         try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            if (!token) throw new Error('ไม่พบ Token กรุณาเข้าสู่ระบบใหม่');
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('ไม่พบ Token กรุณาเข้าสู่ระบบใหม่');
+            }
 
-            const roomId = roomInfo?.room_id;
-            if (!roomId) throw new Error('ไม่พบ room_id');
-
-            console.log(`📤 ส่ง ${validMessages.length} ข้อความไปสรุปที่ server...`);
+            console.log('📤 Calling /api/chat-summary with:', options);
 
             const response = await fetch('/api/chat-summary', {
                 method: 'POST',
@@ -51,100 +47,75 @@ class ChatSummaryAI {
                     'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    room_id: roomId,
-                    message_count: Math.min(validMessages.length, 200)
+                    room_id: options.room_id,
+                    message_count: options.message_count || 100,
+                    start_date: options.start_date || null,
+                    end_date: options.end_date || null,
+                    custom_instruction: options.custom_instruction || null
                 })
             });
 
             const data = await response.json();
 
-            if (!response.ok || !data.success) {
+            // กรณี Rate Limit (429)
+            if (response.status === 429) {
+                return {
+                    success: false,
+                    error: data.error || 'สรุปข้อความได้ 10 ครั้งต่อชั่วโมง กรุณารอ 1 ชั่วโมงแล้วลองใหม่',
+                    rateLimited: true
+                };
+            }
+
+            // กรณี error อื่นๆ
+            if (!response.ok) {
+                throw new Error(data.error || `เกิดข้อผิดพลาด (${response.status})`);
+            }
+
+            if (!data.success) {
                 throw new Error(data.error || 'สรุปไม่สำเร็จ');
             }
 
-            console.log('✅ ได้รับผลสรุปจาก Gemini แล้ว');
+            console.log('✅ Summary received from server');
 
-            // ✅ ปรับโครงสร้างให้ตรงกับที่ chat.js ใช้
+            // ส่งข้อมูลตรงจาก API กลับไป
             return {
                 success: true,
-                summary: data.summary, // raw text จาก Gemini
+                summary: data.summary,
                 summary_id: data.summary_id,
                 report_url: data.report_url,
-                stats: data.stats || {
-                    message_count: validMessages.length,
-                    timeframe: this.calculateTimeRange(messages)
-                }
+                used_fallback: data.used_fallback || false,
+                from_cache: data.from_cache || false,
+                stats: data.stats || null
             };
 
         } catch (error) {
-            console.error('❌ summarizeConversation error:', error.message);
-            return { success: false, error: error.message };
+            console.error('❌ Summary error:', error.message);
+            
+            return {
+                success: false,
+                error: error.message,
+                used_fallback: false
+            };
         } finally {
             this.isSummarizing = false;
         }
     }
 
-    // =====================================================================
-    // Helper functions (ไว้ใช้ในกรณี fallback)
-    // =====================================================================
-    
-    validateMessages(messages) {
-        if (!messages || !Array.isArray(messages) || messages.length < 3) return false;
-        const valid = messages.filter(m => m.message_text?.trim() && m.message_type === 'text');
-        return valid.length >= 3;
+    /**
+     * ตรวจสอบสถานะการสรุป
+     */
+    isActive() {
+        return this.isSummarizing;
     }
 
-    extractParticipants(messages) {
-        const map = new Map();
-        messages.forEach(msg => {
-            const name = msg.full_name || msg.sender || 'ไม่ทราบชื่อ';
-            if (!map.has(name)) map.set(name, { name, message_count: 0 });
-            map.get(name).message_count++;
-        });
-        return Array.from(map.values()).sort((a, b) => b.message_count - a.message_count);
-    }
-
-    calculateTimeRange(messages) {
-        if (messages.length < 2) return 'ไม่ระบุ';
-        const times = messages.map(m => new Date(m.created_at)).filter(d => !isNaN(d));
-        if (times.length < 2) return 'ไม่ระบุ';
-        const diff = (Math.max(...times) - Math.min(...times)) / 60000; // นาที
-        if (diff < 60) return `${Math.round(diff)} นาที`;
-        if (diff < 1440) return `${Math.round(diff / 60)} ชั่วโมง`;
-        return `${Math.round(diff / 1440)} วัน`;
-    }
-
-    generateCacheKey(messages, roomInfo) {
-        return `${roomInfo?.room_id}-${messages.length}`;
-    }
-
-    // ✅ ฟังก์ชันสำหรับ fallback เมื่อ API ล้มเหลว
-    createFallbackSummary(messages, roomName) {
-        const uniqueUsers = [...new Set(messages.map(m => m.full_name))];
-        const timeRange = this.calculateTimeRange(messages);
-        
-        const now = new Date();
-        const thaiDate = now.toLocaleDateString('th-TH', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
-        
-        return `📋 สรุปการสนทนา (ระบบสำรอง) - ${roomName}
-
-**1. ข้อมูลทั่วไป**
-- ห้องสนทนา: ${roomName}
-- วันที่สรุป: ${thaiDate}
-- ระยะเวลาสนทนา: ${timeRange}
-- จำนวนข้อความ: ${messages.length} ข้อความ
-- ผู้เข้าร่วม: ${uniqueUsers.length} คน
-
-**2. สรุปภาพรวม**
-ไม่สามารถเชื่อมต่อกับระบบ AI ได้ในขณะนี้
-
-**3. ข้อสรุป**
-⚠️ *หมายเหตุ: นี่คือสรุปโดยระบบสำรอง กรุณาลองใหม่อีกครั้งภายหลัง*`;
+    /**
+     * ยกเลิกการสรุป (ถ้ามี)
+     */
+    cancel() {
+        this.isSummarizing = false;
+        console.log('🛑 Summary cancelled');
     }
 }
 
+// Export
 window.ChatSummaryAI = ChatSummaryAI;

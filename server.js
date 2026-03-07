@@ -767,7 +767,7 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         const { room_id, message_count = 100, custom_instruction, start_date, end_date } = req.body;
         if (!room_id) return res.status(400).json({ success: false, error: 'กรุณาระบุ room_id' });
 
-        // ✅ เพิ่ม Rate Limit Check
+        // Rate Limit Check
         if (!checkRateLimit(req.user.user_id)) {
             return res.status(429).json({ 
                 success: false, 
@@ -775,7 +775,7 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
             });
         }
 
-        // ✅ เพิ่ม Cache Check
+        // Cache Check
         const cacheKey = `${room_id}_${message_count}_${start_date || ''}_${end_date || ''}`;
         const cachedSummary = summaryCache.get(cacheKey);
         
@@ -815,88 +815,112 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         // รายชื่อผู้เข้าร่วมทั้งหมด
         const participants = [...new Set(sortedMessages.map(msg => msg.full_name))];
 
-        // วันที่/เวลาภาษาไทย พุทธศักราช
-        const _now = new Date();
-        const _buddhistYear = _now.getFullYear() + 543;
-        const _thaiDate = new Intl.DateTimeFormat('th-TH', {
-            year: 'numeric', month: 'long', day: 'numeric',
-            timeZone: 'Asia/Bangkok'
-        }).format(_now).replace(_now.getFullYear().toString(), _buddhistYear.toString());
-        const _thaiTime = new Intl.DateTimeFormat('th-TH', {
-            hour: '2-digit', minute: '2-digit',
-            timeZone: 'Asia/Bangkok'
-        }).format(_now);
+        // ✅ กำหนดค่า timeframe
+        const timeframe = actualTimeframe;
 
-        // ✅ ใช้ Prompt ที่ปรับปรุงใหม่
-        const prompt = `คุณคือผู้เชี่ยวชาญด้านการวิเคราะห์การสื่อสารภายในโรงพยาบาล จงวิเคราะห์และสรุปการสนทนาต่อไปนี้เป็นภาษาไทยที่สละสลวย เข้าใจง่าย
+        // ✅ ตรวจสอบ API key และใช้ model ที่ถูกต้อง
+        let summary;
+        const apiKey = process.env.GEMINI_API_KEY;
+        
+        if (!apiKey) {
+            console.warn('⚠️ No Gemini API key, using fallback summary');
+            summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
+        } else {
+            try {
+                // ✅ แก้ไขตรงนี้: ลองใช้หลาย model
+                const models = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'];
+                let generatedSummary = null;
+                let lastError = null;
+
+                for (const modelName of models) {
+                    try {
+                        console.log(`🔄 Trying model: ${modelName}`);
+                        
+                        const model = genAI.getGenerativeModel({ 
+                            model: modelName,
+                            generationConfig: { 
+                                temperature: 0.3,
+                                maxOutputTokens: 4096
+                            }
+                        });
+                        
+                        const prompt = `คุณคือผู้ช่วยสรุปการประชุมของโรงพยาบาลที่มีความเชี่ยวชาญสูง 
+จงวิเคราะห์และสรุปบทสนทนาต่อไปนี้เป็นภาษาไทยที่สละสลวย เข้าใจง่าย พร้อมระบุการนัดหมายและงานที่ต้องทำ
 
 **บทสนทนา:**
 ${formattedMessages}
 
 ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}
 
-**คำสั่ง:** กรุณาสรุปเป็นภาษาไทยให้ครบทุกหัวข้อต่อไปนี้ โดยใช้รูปแบบที่กำหนดเท่านั้น:
+**คำสั่ง:** กรุณาสรุปตามรูปแบบด้านล่างนี้เท่านั้น:
 
 ---
 
-**📋 สรุปการสนทนา**
+# 📋 รายงานสรุปการสนทนา
 
-**1. ข้อมูลทั่วไป**
-- ห้องสนทนา: ${roomName}
-- วันที่สรุป: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
-- ระยะเวลาสนทนา: ${actualTimeframe}
-- จำนวนข้อความ: ${messages.length} ข้อความ
-- ผู้เข้าร่วม: ${participants.join(', ')}
+## 1. ข้อมูลทั่วไป
+- **ห้องสนทนา:** ${roomName}
+- **วันที่สรุป:** ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+- **ระยะเวลาสนทนา:** ${timeframe}
+- **จำนวนข้อความ:** ${messages.length} ข้อความ
+- **ผู้เข้าร่วม:** ${participants.length} คน (${participants.join(', ')})
 
-**2. สรุปภาพรวม**
-(สรุปเนื้อหาการสนทนาโดยรวม 2-3 ประโยค)
+## 2. สรุปภาพรวม
+[สรุปเนื้อหาการสนทนาโดยรวม 3-5 ประโยค]
 
-**3. ประเด็นสำคัญ**
-- (ประเด็นที่ 1)
-- (ประเด็นที่ 2)
-- (ประเด็นที่ 3)
-(สรุปเป็นข้อๆ ไม่เกิน 7 ข้อ)
+## 3. ประเด็นสำคัญ
+1. [ประเด็นที่ 1]
+2. [ประเด็นที่ 2]
+3. [ประเด็นที่ 3]
 
-**4. ข้อสรุปและมติที่ประชุม**
-(สรุปข้อตกลงหรือมติสำคัญที่ได้จากการสนทนา)
+## 4. การนัดหมาย
+| รายการ | วันที่/เวลา | สถานที่ | ผู้เกี่ยวข้อง |
+|--------|------------|---------|--------------|
+| [ชื่อการนัดหมาย] | [วัน/เวลา] | [สถานที่] | [ชื่อ] |
 
-**5. งานที่ต้องดำเนินการต่อ**
-| เรื่อง | ผู้รับผิดชอบ | กำหนดแล้วเสร็จ | หมายเหตุ |
-|-------|-------------|----------------|----------|
-| (รายละเอียดงาน) | (ชื่อผู้รับผิดชอบ) | (วันที่) | (ถ้ามี) |
+## 5. งานที่ต้องทำ
+| งาน | ผู้รับผิดชอบ | กำหนดส่ง |
+|-----|-------------|----------|
+| [ชื่องาน] | [ชื่อ] | [วันที่] |
 
-**6. ข้อเสนอแนะ**
-(ข้อเสนอแนะสำหรับการสนทนาครั้งต่อไป)
+## 6. ข้อสรุป
+[สรุปข้อตกลง]`;
 
----
+                        const result = await model.generateContent(prompt);
+                        const response = await result.response;
+                        generatedSummary = response.text();
+                        
+                        if (generatedSummary && generatedSummary.length > 0) {
+                            console.log(`✅ Success with model: ${modelName}`);
+                            break;
+                        }
+                    } catch (modelError) {
+                        console.log(`⚠️ Model ${modelName} failed:`, modelError.message);
+                        lastError = modelError;
+                        continue;
+                    }
+                }
 
-**รูปแบบการตอบ:** ให้ตอบเฉพาะเนื้อหาตามหัวข้อข้างต้นเท่านั้น ไม่ต้องมีคำนำหรือคำสรุปเพิ่มเติม`;
-
-        let summary;
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            summary = createFallbackSummary(messages, roomName);
-        } else {
-            try {
-                const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0.3, topP: 0.8, maxOutputTokens: 3000 } });
-                const result = await model.generateContent(prompt);
-                summary = result.response.text();
-                
-                // ✅ บันทึก summary ลง cache
-                summaryCache.set(cacheKey, {
-                    data: summary,
-                    timestamp: Date.now()
-                });
+                if (generatedSummary) {
+                    summary = generatedSummary;
+                    // บันทึก summary ลง cache
+                    summaryCache.set(cacheKey, {
+                        data: summary,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    throw new Error('All models failed: ' + (lastError?.message || 'Unknown error'));
+                }
                 
             } catch (aiError) {
-                console.error('❌ Gemini Error:', aiError.message);
-                summary = createFallbackSummary(messages, roomName);
+                console.error('❌ All Gemini models failed:', aiError.message);
+                // ใช้ fallback
+                summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
             }
         }
 
         const summaryId = `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
-            // ✅ เพิ่ม room_id ใน chat_content เพื่อให้ค้นหาได้
             const chatContentWithRoomId = `room_id:${room_id}\n${formattedMessages}`;
             await client.query(`INSERT INTO chat_summary_new (summary_id, chat_content, summary, created_at) VALUES ($1, $2, $3, NOW())`, [summaryId, chatContentWithRoomId, summary]);
         } catch (dbError) {
@@ -918,11 +942,88 @@ ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${
         });
     } catch (error) {
         console.error('❌ Summary Error:', error);
-        res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาดในการสรุป' });
+        res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาดในการสรุป: ' + error.message });
     } finally {
         if (client) client.release();
     }
 });
+
+// ✅ เพิ่มฟังก์ชัน fallback ที่ดีขึ้น
+function createEnhancedFallbackSummary(messages, roomName, timeframe, participants) {
+    // วิเคราะห์ keywords
+    const keywords = {};
+    const stopWords = ['ครับ', 'ค่ะ', 'นะ', 'ได้', 'แล้ว', 'และ', 'หรือ', 'ที่', 'ใน', 'เป็น', 
+                       'มี', 'ให้', 'ไป', 'มา', 'จะ', 'ก็', 'แต่', 'เลย', 'คะ', 'ขอ', 'หน่อย', 'ด้วย'];
+    
+    messages.forEach(m => {
+        if (!m.message_text) return;
+        m.message_text.split(/\s+/).forEach(word => {
+            const cleanWord = word.replace(/[.,!?;:]/, '');
+            if (cleanWord && cleanWord.length > 2 && !stopWords.includes(cleanWord)) {
+                keywords[cleanWord] = (keywords[cleanWord] || 0) + 1;
+            }
+        });
+    });
+    
+    const topKeywords = Object.entries(keywords)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([w]) => w)
+        .join(', ');
+    
+    // หาการนัดหมาย
+    const appointmentKeywords = ['นัด', 'วัน', 'เวลา', 'พบ', 'เจอ', 'ประชุม'];
+    const appointments = messages.filter(m => 
+        m.message_text && appointmentKeywords.some(k => m.message_text.includes(k))
+    ).slice(0, 3);
+    
+    // หางานที่ต้องทำ
+    const actionKeywords = ['ต้อง', 'จะ', 'ช่วย', 'ทำให้', 'รับผิดชอบ'];
+    const actions = messages.filter(m => 
+        m.message_text && actionKeywords.some(k => m.message_text.includes(k))
+    ).slice(0, 3);
+    
+    const now = new Date();
+    const thaiDate = now.toLocaleDateString('th-TH', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    return `# 📋 รายงานสรุปการสนทนา (ระบบสำรอง)
+
+## 1. ข้อมูลทั่วไป
+- **ห้องสนทนา:** ${roomName}
+- **วันที่สรุป:** ${thaiDate}
+- **ระยะเวลาสนทนา:** ${timeframe}
+- **จำนวนข้อความ:** ${messages.length} ข้อความ
+- **ผู้เข้าร่วม:** ${participants.length} คน (${participants.join(', ')})
+
+## 2. สรุปภาพรวม
+การสนทนาในช่วงเวลาดังกล่าวมีผู้เข้าร่วม ${participants.length} คน จำนวน ${messages.length} ข้อความ 
+หัวข้อหลักที่พูดถึงคือ ${topKeywords || 'ไม่สามารถระบุได้'}
+
+## 3. ประเด็นสำคัญ
+${messages.slice(0, 3).map((m, i) => 
+    `${i+1}. ${m.full_name}: "${m.message_text.substring(0, 100)}${m.message_text.length > 100 ? '...' : ''}"`
+).join('\n')}
+
+## 4. การนัดหมายที่พบ
+${appointments.length > 0 
+    ? appointments.map(m => `- ${m.date} ${m.time}: ${m.full_name} กล่าวว่า "${m.message_text}"`).join('\n')
+    : 'ไม่พบการนัดหมายในการสนทนาครั้งนี้'}
+
+## 5. งานที่ต้องดำเนินการ
+${actions.length > 0
+    ? actions.map(m => `- ${m.full_name}: "${m.message_text}"`).join('\n')
+    : 'ไม่พบงานที่ต้องดำเนินการ'}
+
+## 6. ข้อสรุป
+⚠️ *หมายเหตุ: นี่คือสรุปโดยระบบสำรอง เนื่องจาก AI หลักไม่พร้อมใช้งาน*
+**แนะนำให้ตรวจสอบ Gemini API key ในระบบ**`;
+}
 app.get('/api/chat-summary/history', authenticateToken, async (req, res) => {
     const client = await getConnection();
     try {

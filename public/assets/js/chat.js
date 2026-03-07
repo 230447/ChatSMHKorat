@@ -4495,11 +4495,18 @@ async showAISummary() {
         return;
     }
     
-    // ✅ สร้าง modal สำหรับเลือกช่วงเวลา
+    // ✅ ตรวจสอบจำนวนข้อความในห้อง
+    const messagesList = document.getElementById('messagesList');
+    const messageCount = messagesList.querySelectorAll('.message').length;
+    
+    if (messageCount === 0) {
+        this.showNotification('แจ้งเตือน', 'ยังไม่มีข้อความในห้องนี้', 'info');
+        return;
+    }
+    
+    // ✅ แสดงตัวเลือกช่วงเวลา
     this.showDateRangePicker();
 }
-
-// ✅ ฟังก์ชันใหม่: แสดงตัวเลือกช่วงเวลา
 showDateRangePicker() {
     // ลบ modal เก่าถ้ามี
     const oldModal = document.getElementById('dateRangeModal');
@@ -4514,45 +4521,57 @@ showDateRangePicker() {
                 <h3><i class="fas fa-calendar-alt"></i> เลือกช่วงเวลาสรุป</h3>
                 <button class="close-modal">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding: 20px;">
                 <div class="form-group">
                     <label>ห้อง: <strong>${this.currentRoom.room_name}</strong></label>
+                    <p style="font-size: 13px; color: #7f8c8d; margin-top: 5px;">
+                        <i class="fas fa-info-circle"></i> ข้อความในห้อง: ${document.getElementById('messagesList').querySelectorAll('.message').length} ข้อความ
+                    </p>
                 </div>
                 
                 <div class="form-group">
-                    <label>ตัวเลือกช่วงเวลา</label>
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <button class="btn-quick-date" data-days="1">วันนี้</button>
-                        <button class="btn-quick-date" data-days="7">7 วัน</button>
-                        <button class="btn-quick-date" data-days="30">30 วัน</button>
-                        <button class="btn-quick-date" data-days="0">ทั้งหมด</button>
+                    <label>ตัวเลือกช่วงเวลาด่วน</label>
+                    <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
+                        <button class="btn-quick-date" data-days="1" style="flex:1; padding:8px;">วันนี้</button>
+                        <button class="btn-quick-date" data-days="7" style="flex:1; padding:8px;">7 วัน</button>
+                        <button class="btn-quick-date" data-days="30" style="flex:1; padding:8px;">30 วัน</button>
+                        <button class="btn-quick-date" data-days="all" style="flex:1; padding:8px;">ทั้งหมด</button>
                     </div>
                 </div>
                 
                 <div class="form-group">
                     <label>วันที่เริ่มต้น</label>
-                    <input type="date" id="startDate" class="form-control">
+                    <input type="date" id="startDate" class="form-control" 
+                           style="width:100%; padding:10px; border:2px solid #e3e6f0; border-radius:8px;">
                 </div>
                 
                 <div class="form-group">
                     <label>วันที่สิ้นสุด</label>
-                    <input type="date" id="endDate" class="form-control">
+                    <input type="date" id="endDate" class="form-control"
+                           style="width:100%; padding:10px; border:2px solid #e3e6f0; border-radius:8px;">
                 </div>
                 
                 <div class="form-group">
                     <label>จำนวนข้อความสูงสุด</label>
-                    <select id="messageCount" class="form-control">
-                        <option value="50">50 ข้อความ</option>
-                        <option value="100" selected>100 ข้อความ</option>
-                        <option value="200">200 ข้อความ</option>
-                        <option value="500">500 ข้อความ</option>
-                        <option value="1000">1000 ข้อความ</option>
+                    <select id="messageCount" class="form-control" style="width:100%; padding:10px; border:2px solid #e3e6f0; border-radius:8px;">
+                        <option value="50">50 ข้อความล่าสุด</option>
+                        <option value="100" selected>100 ข้อความล่าสุด</option>
+                        <option value="200">200 ข้อความล่าสุด</option>
+                        <option value="500">500 ข้อความล่าสุด</option>
                     </select>
                 </div>
+                
+                <div class="info-box" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-top:15px;">
+                    <p style="margin:5px 0; color:#6c757d; font-size:13px;">
+                        <i class="fas fa-clock"></i> การสรุปอาจใช้เวลา 10-30 วินาที
+                    </p>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary close-modal">ยกเลิก</button>
-                <button class="btn btn-primary" id="confirmDateRange">
+            <div class="modal-footer" style="padding:15px 20px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn btn-secondary close-modal" style="padding:10px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">
+                    <i class="fas fa-times"></i> ยกเลิก
+                </button>
+                <button id="confirmDateRange" class="btn btn-primary" style="padding:10px 20px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:6px; cursor:pointer;">
                     <i class="fas fa-brain"></i> สรุปการสนทนา
                 </button>
             </div>
@@ -4579,16 +4598,16 @@ showDateRangePicker() {
     // Event listeners สำหรับปุ่มลัด
     modal.querySelectorAll('.btn-quick-date').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const days = parseInt(e.target.dataset.days);
+            const days = e.target.dataset.days;
             const endDate = new Date();
             const startDate = new Date();
             
-            if (days === 0) {
+            if (days === 'all') {
                 // ทั้งหมด - ปล่อยว่าง
                 document.getElementById('startDate').value = '';
                 document.getElementById('endDate').value = '';
             } else {
-                startDate.setDate(endDate.getDate() - days);
+                startDate.setDate(endDate.getDate() - parseInt(days));
                 document.getElementById('startDate').value = formatDate(startDate);
                 document.getElementById('endDate').value = formatDate(endDate);
             }
@@ -4610,54 +4629,157 @@ showDateRangePicker() {
         const endDate = document.getElementById('endDate').value;
         const messageCount = document.getElementById('messageCount').value;
         
+        // ตรวจสอบวันที่
+        if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+            this.showNotification('ข้อผิดพลาด', 'วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด', 'error');
+            return;
+        }
+        
         modal.remove();
         
-        // แสดง loading
-        this.showNotification('กำลังสรุป', 'กำลังสร้างสรุปการสนทนา กรุณารอสักครู่...', 'info');
+        // ✅ แสดง loading modal
+        this.showLoadingModal('กำลังสร้างสรุปการสนทนา...');
         
+        // เรียก API
         await this.callSummaryAPI(startDate, endDate, messageCount);
     });
 }
+showSummaryResult(data) {
+    // ลบ modal เก่าถ้ามี
+    const oldModal = document.getElementById('aiSummaryModal');
+    if (oldModal) oldModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'aiSummaryModal';
+    
+    const isFallback = data.used_fallback || false;
+    const stats = data.stats || {};
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 900px; width: 95%;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px;">
+                <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-brain"></i> 
+                    สรุปการสนทนาด้วย AI
+                    ${isFallback ? '<span style="background:#ff6b6b; color:white; padding:4px 10px; border-radius:20px; font-size:12px; margin-left:10px;">ระบบสำรอง</span>' : ''}
+                </h3>
+                <button class="close-modal" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+            
+            <div class="modal-body" style="padding: 25px; max-height: 70vh; overflow-y: auto;">
+                ${isFallback ? `
+                <div style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>หมายเหตุ:</strong> ระบบ AI หลักไม่พร้อมใช้งาน ใช้ข้อมูลสำรองแทน
+                </div>
+                ` : ''}
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px;">
+                    <div><strong>📌 ห้อง:</strong> ${stats.room_name || this.currentRoom.room_name}</div>
+                    <div><strong>💬 ข้อความ:</strong> ${stats.message_count || 0} ข้อความ</div>
+                    <div><strong>👥 ผู้ร่วม:</strong> ${stats.participant_count || 0} คน</div>
+                    <div><strong>📅 ช่วงเวลา:</strong> ${stats.timeframe || 'ไม่ระบุ'}</div>
+                </div>
+                
+                <div class="summary-content" style="white-space: pre-line; line-height: 1.8; font-size: 15px; background: white; padding: 20px; border-radius: 8px; border: 1px solid #e3e6f0;">
+                    ${this.formatSummary(data.summary)}
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; background: #f8fafc;">
+                <button class="btn btn-secondary close-modal" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-times"></i> ปิด
+                </button>
+                
+                <button id="copySummaryBtn" style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-copy"></i> คัดลอก
+                </button>
+                
+                <button id="saveSummaryBtn" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-save"></i> บันทึก
+                </button>
+                
+                <button id="openReportBtn" style="padding: 10px 20px; background: #9b59b6; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fas fa-file-alt"></i> ดูรายงาน
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    modal.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', () => modal.remove());
+    });
+    
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+    
+    // ปุ่มคัดลอก
+    document.getElementById('copySummaryBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(data.summary).then(() => {
+            this.showNotification('สำเร็จ', 'คัดลอกสรุปแล้ว', 'success');
+        }).catch(() => {
+            // Fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = data.summary;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            this.showNotification('สำเร็จ', 'คัดลอกสรุปแล้ว', 'success');
+        });
+    });
+    
+    // ปุ่มบันทึก
+    document.getElementById('saveSummaryBtn').addEventListener('click', async () => {
+        await this.saveSummary(data.summary);
+    });
+    
+    // ปุ่มดูรายงาน
+    document.getElementById('openReportBtn').addEventListener('click', () => {
+        this.openReportPage(data.summary, this.currentRoom);
+    });
+}
 
-// ✅ ฟังก์ชันใหม่: เรียก API สรุป
-
+// ใน chat.js (ฟังก์ชัน callSummaryAPI)
 async callSummaryAPI(startDate, endDate, messageCount) {
     try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('/api/chat-summary', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                room_id: this.currentRoom.room_id,
-                message_count: parseInt(messageCount),
-                start_date: startDate || null,
-                end_date: endDate || null
-            })
+        const aiSummarizer = new ChatSummaryAI();
+        
+        const result = await aiSummarizer.summarize({
+            room_id: this.currentRoom.room_id,
+            message_count: parseInt(messageCount),
+            start_date: startDate || null,
+            end_date: endDate || null
         });
         
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                // ✅ สร้าง modal ก่อน แล้วค่อย displaySummary
-                this.createSummaryModal();
-                
-                // รอให้ modal สร้างเสร็จ แล้วค่อยแสดง summary
-                setTimeout(() => {
-                    this.displaySummary(data.summary, data.stats, data.summary_id, data.report_url);
-                }, 100);
-                
-                return;
+        // ปิด loading modal
+        this.closeLoadingModal();
+        
+        if (result.success) {
+            // แสดงผลสรุป
+            this.showSummaryResult({
+                summary: result.summary,
+                summary_id: result.summary_id,
+                report_url: result.report_url,
+                used_fallback: result.used_fallback,
+                stats: result.stats
+            });
+        } else {
+            // แสดง error
+            this.showNotification('เกิดข้อผิดพลาด', result.error, 'error');
+            
+            // ถ้าเป็น rate limit ให้แจ้งเตือนพิเศษ
+            if (result.rateLimited) {
+                this.showNotification('จำกัดการใช้งาน', result.error, 'warning');
             }
         }
-        
-        // ถ้า API error
-        const errorData = await response.json();
-        this.showNotification('เกิดข้อผิดพลาด', errorData.error || 'ไม่สามารถสร้างสรุปได้', 'error');
-        
     } catch (error) {
+        this.closeLoadingModal();
         console.error('AI Summary error:', error);
         this.showNotification('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์', 'error');
     }
@@ -4947,76 +5069,57 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
 formatSummary(summary) {
     if (!summary) return '<p class="text-muted">ไม่มีข้อมูล</p>';
     
-    const lines = summary.split('\n');
-    let html = '';
-    let inList = false;
+    // แปลง markdown เป็น HTML อย่างง่าย
+    let html = summary
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/\n/g, '<br>');
     
-    const closeList = () => {
-        if (inList) { html += '</ul>'; inList = false; }
-    };
+    // จัดการกับ bullet points
+    html = html.replace(/^- (.*$)/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
     
-    lines.forEach(line => {
-        const trimmed = line.trim();
-        
-        // บรรทัดว่าง
-        if (!trimmed) {
-            closeList();
-            html += '<br>';
-            return;
-        }
-        
-        // ✅ หัวข้อหลัก: **1. 📋 สรุปภาพรวม**
-        if (/^\*\*(\d+\.\s*[📌🔑✅⚠️📊].*?)\*\*$/.test(trimmed) ||
-            /^\*\*(\d+\.\s*.+?)\*\*$/.test(trimmed) ||
-            /^\*\*([📌🔑✅⚠️📊].+?)\*\*$/.test(trimmed)) {
-            closeList();
-            const heading = trimmed.replace(/^\*\*|\*\*$/g, '');
-            html += `<div class="summary-section-block"><h3>${heading}</h3>`;
-            return;
-        }
-        
-        // ✅ หัวข้อรอง: **1.1 ชื่อเรื่อง**
-        if (/^\*\*(\d+\.\d+\.\s*.+?)\*\*$/.test(trimmed)) {
-            closeList();
-            const heading = trimmed.replace(/^\*\*|\*\*$/g, '');
-            html += `<h4 style="color:#0d6efd; margin:15px 0 8px 0;">${heading}</h4>`;
-            return;
-        }
-        
-        // ✅ bullet list: - หรือ •
-        if (/^[-•]\s/.test(trimmed)) {
-            if (!inList) { html += '<ul>'; inList = true; }
-            const content = trimmed.replace(/^[-•]\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            html += `<li>${content}</li>`;
-            return;
-        }
-        
-        // ✅ numbered list: 1. 2. ...
-        if (/^\d+\.\s/.test(trimmed) && !trimmed.match(/^\*\*/)) {
-            closeList();
-            const num = trimmed.match(/^(\d+)/)[1];
-            const content = trimmed.replace(/^\d+\.\s/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            html += `<p><strong>${num}.</strong> ${content}</p>`;
-            return;
-        }
-        
-        // ✅ horizontal rule
-        if (/^[-—=]{3,}$/.test(trimmed)) {
-            closeList();
-            html += '<hr>';
-            return;
-        }
-        
-        // ✅ paragraph ทั่วไป
-        closeList();
-        const content = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        html += `<p>${content}</p>`;
-    });
-    
-    closeList();
     return html;
 }
+// ✅ เพิ่มฟังก์ชันแสดง Loading Modal
+showLoadingModal(message) {
+    // ลบ modal เก่าถ้ามี
+    const oldModal = document.getElementById('loadingModal');
+    if (oldModal) oldModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.id = 'loadingModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-body" style="padding: 40px;">
+                <div class="loading-spinner" style="margin: 0 auto 20px; width: 50px; height: 50px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <h3 style="margin-bottom: 10px; color: #2c3e50;">${message || 'กำลังดำเนินการ...'}</h3>
+                <p style="color: #7f8c8d;">กรุณารอสักครู่</p>
+                <p style="color: #95a5a6; font-size: 12px; margin-top: 20px;">
+                    <i class="fas fa-clock"></i> อาจใช้เวลา 10-30 วินาที
+                </p>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    
+    document.body.appendChild(modal);
+}
 
+// ✅ เพิ่มฟังก์ชันปิด Loading Modal
+closeLoadingModal() {
+    const modal = document.getElementById('loadingModal');
+    if (modal) modal.remove();
+}
 async saveSummary(summary) {
     try {
         const token = localStorage.getItem('token');
@@ -5743,7 +5846,131 @@ changePassword() {
     console.log('✅ อัปเดต user data แล้ว:', updatedUser);
 }
 }
+// =====================================================================
+// Chat Summary AI Module - Client Side
+// ทำงานร่วมกับ server API /api/chat-summary
+// =====================================================================
+class ChatSummaryAI {
+    constructor() {
+        this.isSummarizing = false;
+        console.log('🤖 Chat Summary AI initialized');
+    }
 
+    /**
+     * เรียก API /api/chat-summary เพื่อสรุปข้อความ
+     * @param {Object} options - { room_id, message_count, start_date, end_date, custom_instruction }
+     */
+    async summarize(options) {
+        // ป้องกันการเรียกซ้ำ
+        if (this.isSummarizing) {
+            return { 
+                success: false, 
+                error: 'กำลังสรุปอยู่ กรุณารอสักครู่',
+                isProcessing: true 
+            };
+        }
+
+        // ตรวจสอบ options
+        if (!options || !options.room_id) {
+            return { 
+                success: false, 
+                error: 'กรุณาระบุ room_id' 
+            };
+        }
+
+        this.isSummarizing = true;
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('ไม่พบ Token กรุณาเข้าสู่ระบบใหม่');
+            }
+
+            console.log('📤 Calling /api/chat-summary with:', options);
+
+            const response = await fetch('/api/chat-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    room_id: options.room_id,
+                    message_count: options.message_count || 100,
+                    start_date: options.start_date || null,
+                    end_date: options.end_date || null,
+                    custom_instruction: options.custom_instruction || null
+                })
+            });
+
+            const data = await response.json();
+
+            // กรณี Rate Limit (429)
+            if (response.status === 429) {
+                return {
+                    success: false,
+                    error: data.error || 'สรุปข้อความได้ 10 ครั้งต่อชั่วโมง กรุณารอ 1 ชั่วโมงแล้วลองใหม่',
+                    rateLimited: true
+                };
+            }
+
+            // กรณี error อื่นๆ
+            if (!response.ok) {
+                throw new Error(data.error || `เกิดข้อผิดพลาด (${response.status})`);
+            }
+
+            if (!data.success) {
+                throw new Error(data.error || 'สรุปไม่สำเร็จ');
+            }
+
+            console.log('✅ Summary received from server');
+
+            // ส่งข้อมูลตรงจาก API กลับไป
+            return {
+                success: true,
+                summary: data.summary,
+                summary_id: data.summary_id,
+                report_url: data.report_url,
+                used_fallback: data.used_fallback || false,
+                from_cache: data.from_cache || false,
+                stats: data.stats || null
+            };
+
+        } catch (error) {
+            console.error('❌ Summary error:', error.message);
+            
+            return {
+                success: false,
+                error: error.message,
+                used_fallback: false
+            };
+        } finally {
+            this.isSummarizing = false;
+        }
+    }
+
+    /**
+     * ตรวจสอบสถานะการสรุป
+     */
+    isActive() {
+        return this.isSummarizing;
+    }
+
+    /**
+     * ยกเลิกการสรุป (ถ้ามี)
+     */
+    cancel() {
+        this.isSummarizing = false;
+        console.log('🛑 Summary cancelled');
+    }
+}
+
+// =====================================================================
+// END of Chat Summary AI Module
+// =====================================================================
+
+// Initialize the chat app
+window.chatApp = new EnhancedChatApp();
 
 // Initialize the chat app
 window.chatApp = new EnhancedChatApp();
