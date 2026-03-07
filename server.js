@@ -827,8 +827,13 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
             summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
         } else {
             try {
-                // ✅ แก้ไขตรงนี้: ลองใช้หลาย model
-                const models = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro'];
+                // ✅ แก้ไข: ใช้ model names ที่ถูกต้อง
+                const models = [
+                    'models/gemini-1.5-pro',    // ใช้ model path แบบเต็ม
+                    'models/gemini-1.5-flash',
+                    'models/gemini-pro'
+                ];
+                
                 let generatedSummary = null;
                 let lastError = null;
 
