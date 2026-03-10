@@ -620,4 +620,14 @@ html {
     .message.received {
         max-width: 65% !important;
     }
+    /* ซ่อนปุ่มปิด nav บน desktop */
+nav .close-nav {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    nav .close-nav {
+        display: flex;
+    }
+}
 }
