@@ -757,7 +757,248 @@ app.get('/api/users/:userId', authenticateToken, async (req, res) => {
         if (client) client.release();
     }
 });
+// ========================================
+// Smart Summary Engine (AI-grade Fallback)
+// ========================================
+class SmartSummaryEngine {
+    constructor() {
+        this.stopWords = new Set(['ครับ', 'ค่ะ', 'นะ', 'ได้', 'แล้ว', 'และ', 'หรือ', 
+            'ที่', 'ใน', 'เป็น', 'มี', 'ให้', 'ไป', 'มา', 'จะ', 'ก็', 'แต่', 'เลย', 
+            'คะ', 'ขอ', 'หน่อย', 'ด้วย', 'การ', 'ของ', 'กับ', 'ว่า', 'ซึ่ง']);
+        
+        this.categoryKeywords = {
+            appointment: ['นัด', 'วัน', 'เวลา', 'พบ', 'เจอ', 'ประชุม', ' meeting', 'appointment'],
+            task: ['ต้อง', 'จะ', 'ช่วย', 'ทำให้', 'รับผิดชอบ', 'ดำเนินการ', 'task', 'todo'],
+            decision: ['ตกลง', 'สรุป', 'agree', 'approve', 'ok', 'ได้', 'โอเค'],
+            urgent: ['ด่วน', 'รีบ', 'สำคัญ', 'urgent', 'important', 'asap'],
+            question: ['?', 'ใคร', 'อะไร', 'เมื่อไหร่', 'ที่ไหน', 'อย่างไร'],
+            medication: ['ยา', 'ทาน', 'med', 'prescription', 'ไข้', 'อาการ'],
+            patient: ['คนไข้', 'patient', 'admit', 'discharge']
+        };
+    }
 
+    generateSummary(messages, roomName, timeframe, participants, customInstruction = '') {
+        console.log('🤖 Using Smart Summary Engine (AI-grade)');
+
+        // 1. Deep Analysis
+        const analysis = this.deepAnalyze(messages);
+        
+        // 2. Extract Entities
+        const entities = this.extractEntities(messages);
+        
+        // 3. Build Timeline
+        const timeline = this.buildTimeline(messages);
+        
+        // 4. Identify Action Items
+        const actionItems = this.identifyActionItems(messages);
+        
+        // 5. Find Decisions
+        const decisions = this.findDecisions(messages);
+        
+        // 6. Detect Topics
+        const topics = this.detectTopics(messages);
+        
+        // 7. Create Summary
+        return this.formatSummary({
+            roomName,
+            timeframe,
+            participants,
+            analysis,
+            entities,
+            timeline,
+            actionItems,
+            decisions,
+            topics,
+            customInstruction,
+            messageCount: messages.length
+        });
+    }
+
+    deepAnalyze(messages) {
+        const result = {
+            sentiment: 'neutral',
+            urgency: 'normal',
+            keyPhrases: [],
+            categories: {},
+            participants: {},
+            timeSegments: []
+        };
+
+        messages.forEach(msg => {
+            const text = msg.message_text?.toLowerCase() || '';
+            
+            // Analyze sentiment
+            if (text.includes('ขอบคุณ') || text.includes('ดีใจ')) result.sentiment = 'positive';
+            if (text.includes('ปัญหา') || text.includes('ไม่พอใจ')) result.sentiment = 'negative';
+            
+            // Track participants
+            if (!result.participants[msg.full_name]) {
+                result.participants[msg.full_name] = {
+                    messageCount: 0,
+                    lastActive: msg.time,
+                    topics: []
+                };
+            }
+            result.participants[msg.full_name].messageCount++;
+        });
+
+        return result;
+    }
+
+    extractEntities(messages) {
+        const entities = {
+            dates: [],
+            times: [],
+            names: new Set(),
+            medications: [],
+            departments: new Set(),
+            patientIds: []
+        };
+
+        const dateRegex = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/g;
+        const timeRegex = /(\d{1,2}[.:]\d{2})\s*(น\.|โมง)/g;
+
+        messages.forEach(msg => {
+            const text = msg.message_text || '';
+            
+            // Extract dates
+            const dates = text.match(dateRegex);
+            if (dates) entities.dates.push(...dates);
+            
+            // Extract times
+            const times = text.match(timeRegex);
+            if (times) entities.times.push(...times);
+            
+            // Extract medications
+            if (this.categoryKeywords.medication.some(k => text.toLowerCase().includes(k))) {
+                entities.medications.push(msg);
+            }
+        });
+
+        return entities;
+    }
+
+    buildTimeline(messages) {
+        const timeline = [];
+        let currentHour = null;
+        let hourMessages = [];
+
+        messages.slice(0, 10).forEach(msg => {
+            timeline.push({
+                time: msg.time,
+                speaker: msg.full_name,
+                message: msg.message_text?.substring(0, 100) + (msg.message_text?.length > 100 ? '...' : '')
+            });
+        });
+
+        return timeline;
+    }
+
+    identifyActionItems(messages) {
+        const actions = [];
+        
+        messages.forEach(msg => {
+            const text = msg.message_text?.toLowerCase() || '';
+            if (this.categoryKeywords.task.some(k => text.includes(k))) {
+                actions.push({
+                    task: msg.message_text,
+                    assignee: msg.full_name,
+                    time: msg.time,
+                    date: msg.date
+                });
+            }
+        });
+
+        return actions.slice(0, 5);
+    }
+
+    findDecisions(messages) {
+        const decisions = [];
+        
+        messages.forEach(msg => {
+            const text = msg.message_text?.toLowerCase() || '';
+            if (this.categoryKeywords.decision.some(k => text.includes(k))) {
+                decisions.push({
+                    decision: msg.message_text,
+                    madeBy: msg.full_name,
+                    time: msg.time
+                });
+            }
+        });
+
+        return decisions.slice(0, 3);
+    }
+
+    detectTopics(messages) {
+        const wordFreq = {};
+        const topics = [];
+        
+        messages.forEach(msg => {
+            const words = msg.message_text?.split(/\s+/) || [];
+            words.forEach(word => {
+                const clean = word.replace(/[.,!?;:]/g, '');
+                if (clean.length > 2 && !this.stopWords.has(clean)) {
+                    wordFreq[clean] = (wordFreq[clean] || 0) + 1;
+                }
+            });
+        });
+
+        return Object.entries(wordFreq)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([topic, count]) => `${topic} (${count} ครั้ง)`);
+    }
+
+    formatSummary(data) {
+        const now = new Date();
+        const thaiDate = now.toLocaleDateString('th-TH', { 
+            year: 'numeric', month: 'long', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        return `# 📋 รายงานสรุปการสนทนาอัจฉริยะ
+
+## 1. ข้อมูลทั่วไป
+- **ห้องสนทนา:** ${data.roomName}
+- **วันที่สรุป:** ${thaiDate}
+- **ระยะเวลาสนทนา:** ${data.timeframe}
+- **จำนวนข้อความ:** ${data.messageCount} ข้อความ
+- **ผู้เข้าร่วม:** ${data.participants.length} คน (${data.participants.join(', ')})
+- **ระดับความเร่งด่วน:** ${data.analysis.urgency === 'high' ? '🔴 สูง' : data.analysis.urgency === 'medium' ? '🟡 ปานกลาง' : '🟢 ปกติ'}
+
+## 2. หัวข้อที่พูดถึงมากที่สุด
+${data.topics.map(t => `- ${t}`).join('\n')}
+
+## 3. ไทม์ไลน์สำคัญ
+${data.timeline.map(t => `- **${t.time}** ${t.speaker}: ${t.message}`).join('\n')}
+
+## 4. รายการนัดหมายที่พบ
+${data.entities.dates.length > 0 
+    ? data.entities.dates.map(d => `- วันที่ ${d}`).join('\n')
+    : '- ไม่พบการนัดหมาย'}
+
+## 5. งานที่ต้องดำเนินการ
+${data.actionItems.length > 0
+    ? data.actionItems.map(a => `- **${a.assignee}:** ${a.task}`).join('\n')
+    : '- ไม่พบงานที่ต้องดำเนินการ'}
+
+## 6. การตัดสินใจ/ข้อสรุป
+${data.decisions.length > 0
+    ? data.decisions.map(d => `- ${d.time}: ${d.decision}`).join('\n')
+    : '- ไม่พบการตัดสินใจที่ชัดเจน'}
+
+## 7. สรุปภาพรวม
+- การสนทนาครั้งนี้มีผู้เข้าร่วม ${data.participants.length} คน
+- มีการพูดคุยเกี่ยวกับ ${data.topics.length > 0 ? data.topics[0].split(' ')[0] : 'เรื่องทั่วไป'}
+- ${data.actionItems.length > 0 ? `มีงานที่ต้องทำ ${data.actionItems.length} รายการ` : 'ไม่มีงานที่ต้องทำ'}
+
+---
+*⚡ สรุปโดยระบบวิเคราะห์อัจฉริยะ | Fallback Mode (AI-ready)*`;
+    }
+}
+
+// สร้าง instance
+const smartSummaryEngine = new SmartSummaryEngine();
 // ========================================
 // AI Summary Routes
 // ========================================
@@ -918,9 +1159,16 @@ ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${
                 
             } catch (aiError) {
                 console.error('❌ All Gemini models failed:', aiError.message);
-                // ใช้ fallback
-                summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
-            }
+                // ใช้ Smart Fallback (AI-grade)
+                console.log('🔄 Switching to Smart Summary Engine...');
+                summary = smartSummaryEngine.generateSummary(
+                    messages, 
+                    roomName, 
+                    actualTimeframe, 
+                    participants,
+                    custom_instruction
+                );
+}
         }
 
         const summaryId = `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1166,6 +1414,39 @@ function checkRateLimit(userId) {
     return true;
 }
 // ========================================
+// Quota Management
+// ========================================
+const quotaManager = {
+    dailyUsage: new Map(),
+    
+    checkQuota(userId) {
+        const today = new Date().toDateString();
+        const key = `${userId}_${today}`;
+        const usage = this.dailyUsage.get(key) || 0;
+        
+        // จำกัด 50 ครั้งต่อวันต่อ user
+        return usage < 50;
+    },
+    
+    incrementUsage(userId) {
+        const today = new Date().toDateString();
+        const key = `${userId}_${today}`;
+        const usage = this.dailyUsage.get(key) || 0;
+        this.dailyUsage.set(key, usage + 1);
+        
+        // Clean up old entries (รันทุกชั่วโมง)
+        setTimeout(() => {
+            const now = new Date();
+            for (const [k, v] of this.dailyUsage.entries()) {
+                const entryDate = new Date(k.split('_')[1]);
+                if (now - entryDate > 24 * 60 * 60 * 1000) {
+                    this.dailyUsage.delete(k);
+                }
+            }
+        }, 60 * 60 * 1000);
+    }
+};
+// ========================================
 // Socket.IO
 // ========================================
 const onlineUsers = new Map();
@@ -1359,7 +1640,7 @@ app.use((err, req, res, next) => {
 // Start server
 // ========================================
 async function startServer() {
-    console.log('🔑 GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
+     console.log('🔑 GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
     console.log('🔑 Key prefix:', process.env.GEMINI_API_KEY?.substring(0, 8));
     try {
         console.log('🔄 Testing database connection...');
