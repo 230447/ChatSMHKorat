@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 require('dotenv').config();
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
@@ -17,7 +17,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 
 const app = express();
 const server = http.createServer(app);
@@ -948,53 +948,33 @@ class SmartSummaryEngine {
             .slice(0, 8)
             .map(([topic, count]) => `${topic} (${count} ครั้ง)`);
     }
+formatSummary(data) {
+    const appointmentPattern = /นัด|ประชุม|พบ|เจอ|\d{1,2}[\/\-]\d{1,2}|\d{1,2}:\d{2}|โมง|บ่าย|เช้า|พรุ่งนี้|วันนี้/i;
+    const actionPattern = /ต้อง|ช่วย|รับผิดชอบ|ดำเนินการ|ส่ง|เตรียม|แจ้ง|ติดต่อ|ตรวจ/;
 
-    formatSummary(data) {
-        const now = new Date();
-        const thaiDate = now.toLocaleDateString('th-TH', { 
-            year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
+    // ค้นหาจาก messages โดยตรง (เข้าถึงผ่าน timeline ที่มีอยู่)
+    const apptItems = data.timeline.filter(t => t.message && appointmentPattern.test(t.message));
+    const actionItems = data.actionItems.length > 0 ? data.actionItems : 
+        data.timeline.filter(t => t.message && actionPattern.test(t.message));
 
-        return `# 📋 รายงานสรุปการสนทนาอัจฉริยะ
+    const topTopics = data.topics.slice(0, 3).map(t => t.split(' ')[0]).join(', ');
 
-## 1. ข้อมูลทั่วไป
-- **ห้องสนทนา:** ${data.roomName}
-- **วันที่สรุป:** ${thaiDate}
-- **ระยะเวลาสนทนา:** ${data.timeframe}
-- **จำนวนข้อความ:** ${data.messageCount} ข้อความ
-- **ผู้เข้าร่วม:** ${data.participants.length} คน (${data.participants.join(', ')})
-- **ระดับความเร่งด่วน:** ${data.analysis.urgency === 'high' ? '🔴 สูง' : data.analysis.urgency === 'medium' ? '🟡 ปานกลาง' : '🟢 ปกติ'}
+    const appointmentText = apptItems.length > 0
+        ? apptItems.slice(0, 2).map(t => `• ${t.speaker}: "${t.message}"`).join('\n')
+        : (data.entities.dates.length > 0 ? data.entities.dates.map(d => `• วันที่ ${d}`).join('\n') : 'ไม่มี');
 
-## 2. หัวข้อที่พูดถึงมากที่สุด
-${data.topics.map(t => `- ${t}`).join('\n')}
+    const actionText = actionItems.length > 0
+        ? actionItems.slice(0, 2).map(a => `• ${a.assignee || a.speaker}: "${(a.task || a.message || '').substring(0, 100)}"`).join('\n')
+        : 'ไม่มี';
 
-## 3. ไทม์ไลน์สำคัญ
-${data.timeline.map(t => `- **${t.time}** ${t.speaker}: ${t.message}`).join('\n')}
+    return `🗣️ **กำลังคุยเรื่อง:** การสนทนาใน${data.roomName} (${data.participants.length} คน: ${data.participants.join(', ')}) พูดถึงเรื่อง ${topTopics || 'ทั่วไป'}
 
-## 4. รายการนัดหมายที่พบ
-${data.entities.dates.length > 0 
-    ? data.entities.dates.map(d => `- วันที่ ${d}`).join('\n')
-    : '- ไม่พบการนัดหมาย'}
+📅 **นัดหมาย:**
+${appointmentText}
 
-## 5. งานที่ต้องดำเนินการ
-${data.actionItems.length > 0
-    ? data.actionItems.map(a => `- **${a.assignee}:** ${a.task}`).join('\n')
-    : '- ไม่พบงานที่ต้องดำเนินการ'}
-
-## 6. การตัดสินใจ/ข้อสรุป
-${data.decisions.length > 0
-    ? data.decisions.map(d => `- ${d.time}: ${d.decision}`).join('\n')
-    : '- ไม่พบการตัดสินใจที่ชัดเจน'}
-
-## 7. สรุปภาพรวม
-- การสนทนาครั้งนี้มีผู้เข้าร่วม ${data.participants.length} คน
-- มีการพูดคุยเกี่ยวกับ ${data.topics.length > 0 ? data.topics[0].split(' ')[0] : 'เรื่องทั่วไป'}
-- ${data.actionItems.length > 0 ? `มีงานที่ต้องทำ ${data.actionItems.length} รายการ` : 'ไม่มีงานที่ต้องทำ'}
-
----
-*⚡ สรุปโดยระบบวิเคราะห์อัจฉริยะ | Fallback Mode (AI-ready)*`;
-    }
+✅ **งานที่ต้องทำ:**
+${actionText}`;
+}
 }
 
 // สร้าง instance
@@ -1089,47 +1069,20 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
                             }
                         });
                         
-                        const prompt = `คุณคือผู้ช่วยสรุปการประชุมของโรงพยาบาลที่มีความเชี่ยวชาญสูง 
-จงวิเคราะห์และสรุปบทสนทนาต่อไปนี้เป็นภาษาไทยที่สละสลวย เข้าใจง่าย พร้อมระบุการนัดหมายและงานที่ต้องทำ
+                       const prompt = `คุณคือผู้ช่วยสรุปการสนทนาของโรงพยาบาล จงอ่านบทสนทนาแล้วสรุปให้กระชับ
 
 **บทสนทนา:**
 ${formattedMessages}
 
 ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}
 
-**คำสั่ง:** กรุณาสรุปตามรูปแบบด้านล่างนี้เท่านั้น:
+ตอบในรูปแบบนี้เท่านั้น ห้ามเพิ่มหัวข้ออื่น:
 
----
+🗣️ **กำลังคุยเรื่อง:** [สรุป 1-2 ประโยคว่ากำลังคุยเรื่องอะไร]
 
-# 📋 รายงานสรุปการสนทนา
+📅 **นัดหมาย:** [ถ้ามีให้ระบุ วัน เวลา เรื่อง ถ้าไม่มีให้เขียนว่า ไม่มี]
 
-## 1. ข้อมูลทั่วไป
-- **ห้องสนทนา:** ${roomName}
-- **วันที่สรุป:** ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-- **ระยะเวลาสนทนา:** ${timeframe}
-- **จำนวนข้อความ:** ${messages.length} ข้อความ
-- **ผู้เข้าร่วม:** ${participants.length} คน (${participants.join(', ')})
-
-## 2. สรุปภาพรวม
-[สรุปเนื้อหาการสนทนาโดยรวม 3-5 ประโยค]
-
-## 3. ประเด็นสำคัญ
-1. [ประเด็นที่ 1]
-2. [ประเด็นที่ 2]
-3. [ประเด็นที่ 3]
-
-## 4. การนัดหมาย
-| รายการ | วันที่/เวลา | สถานที่ | ผู้เกี่ยวข้อง |
-|--------|------------|---------|--------------|
-| [ชื่อการนัดหมาย] | [วัน/เวลา] | [สถานที่] | [ชื่อ] |
-
-## 5. งานที่ต้องทำ
-| งาน | ผู้รับผิดชอบ | กำหนดส่ง |
-|-----|-------------|----------|
-| [ชื่องาน] | [ชื่อ] | [วันที่] |
-
-## 6. ข้อสรุป
-[สรุปข้อตกลง]`;
+✅ **งานที่ต้องทำ:** [ถ้ามีให้ระบุงานและผู้รับผิดชอบ ถ้าไม่มีให้เขียนว่า ไม่มี]`;
 
                         const result = await model.generateContent(prompt);
                         const response = await result.response;
@@ -1200,81 +1153,44 @@ ${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${
     }
 });
 
-// ✅ เพิ่มฟังก์ชัน fallback ที่ดีขึ้น
 function createEnhancedFallbackSummary(messages, roomName, timeframe, participants) {
-    // วิเคราะห์ keywords
-    const keywords = {};
-    const stopWords = ['ครับ', 'ค่ะ', 'นะ', 'ได้', 'แล้ว', 'และ', 'หรือ', 'ที่', 'ใน', 'เป็น', 
-                       'มี', 'ให้', 'ไป', 'มา', 'จะ', 'ก็', 'แต่', 'เลย', 'คะ', 'ขอ', 'หน่อย', 'ด้วย'];
+    const stopWords = new Set(['ครับ','ค่ะ','นะ','ได้','แล้ว','และ','หรือ','ที่','ใน','เป็น','มี','ให้','ไป','มา','จะ','ก็','แต่','เลย','คะ','ขอ','หน่อย','ด้วย','ว่า','กับ','ของ','การ']);
     
+    const keywords = {};
     messages.forEach(m => {
         if (!m.message_text) return;
         m.message_text.split(/\s+/).forEach(word => {
-            const cleanWord = word.replace(/[.,!?;:]/, '');
-            if (cleanWord && cleanWord.length > 2 && !stopWords.includes(cleanWord)) {
-                keywords[cleanWord] = (keywords[cleanWord] || 0) + 1;
+            const clean = word.replace(/[.,!?;:"""'']/g, '');
+            if (clean.length > 1 && !stopWords.has(clean)) {
+                keywords[clean] = (keywords[clean] || 0) + 1;
             }
         });
     });
-    
-    const topKeywords = Object.entries(keywords)
-        .sort((a,b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([w]) => w)
-        .join(', ');
-    
-    // หาการนัดหมาย
-    const appointmentKeywords = ['นัด', 'วัน', 'เวลา', 'พบ', 'เจอ', 'ประชุม'];
-    const appointments = messages.filter(m => 
-        m.message_text && appointmentKeywords.some(k => m.message_text.includes(k))
-    ).slice(0, 3);
-    
+    const topTopics = Object.entries(keywords).sort((a,b) => b[1]-a[1]).slice(0,5).map(([w]) => w).join(', ');
+
+    // หาการนัดหมาย - ตรวจสอบหลายรูปแบบ
+    const appointmentPattern = /นัด|ประชุม|พบ|เจอ|meeting|\d{1,2}[\/\-]\d{1,2}|\d{1,2}:\d{2}|โมง|บ่าย|เช้า|เย็น|วันที่|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์/i;
+    const appointmentMsgs = messages.filter(m => m.message_text && appointmentPattern.test(m.message_text));
+
     // หางานที่ต้องทำ
-    const actionKeywords = ['ต้อง', 'จะ', 'ช่วย', 'ทำให้', 'รับผิดชอบ'];
-    const actions = messages.filter(m => 
-        m.message_text && actionKeywords.some(k => m.message_text.includes(k))
-    ).slice(0, 3);
-    
-    const now = new Date();
-    const thaiDate = now.toLocaleDateString('th-TH', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-    
-    return `# 📋 รายงานสรุปการสนทนา (ระบบสำรอง)
+    const actionPattern = /ต้อง|ช่วย|รับผิดชอบ|ดำเนินการ|ส่ง|เตรียม|จัดเตรียม|แจ้ง|ติดต่อ|ตรวจ|รายงาน/;
+    const actionMsgs = messages.filter(m => m.message_text && actionPattern.test(m.message_text));
 
-## 1. ข้อมูลทั่วไป
-- **ห้องสนทนา:** ${roomName}
-- **วันที่สรุป:** ${thaiDate}
-- **ระยะเวลาสนทนา:** ${timeframe}
-- **จำนวนข้อความ:** ${messages.length} ข้อความ
-- **ผู้เข้าร่วม:** ${participants.length} คน (${participants.join(', ')})
+    const appointmentText = appointmentMsgs.length > 0
+        ? appointmentMsgs.slice(0, 2).map(m => `• ${m.full_name}: "${m.message_text.substring(0, 100)}"`).join('\n')
+        : 'ไม่มี';
 
-## 2. สรุปภาพรวม
-การสนทนาในช่วงเวลาดังกล่าวมีผู้เข้าร่วม ${participants.length} คน จำนวน ${messages.length} ข้อความ 
-หัวข้อหลักที่พูดถึงคือ ${topKeywords || 'ไม่สามารถระบุได้'}
+    const actionText = actionMsgs.length > 0
+        ? actionMsgs.slice(0, 2).map(m => `• ${m.full_name}: "${m.message_text.substring(0, 100)}"`).join('\n')
+        : 'ไม่มี';
 
-## 3. ประเด็นสำคัญ
-${messages.slice(0, 3).map((m, i) => 
-    `${i+1}. ${m.full_name}: "${m.message_text.substring(0, 100)}${m.message_text.length > 100 ? '...' : ''}"`
-).join('\n')}
+    return `🗣️ **กำลังคุยเรื่อง:** การสนทนาใน${roomName} (${participants.length} คน: ${participants.join(', ')}) พูดถึงเรื่อง ${topTopics || 'ทั่วไป'}
 
-## 4. การนัดหมายที่พบ
-${appointments.length > 0 
-    ? appointments.map(m => `- ${m.date} ${m.time}: ${m.full_name} กล่าวว่า "${m.message_text}"`).join('\n')
-    : 'ไม่พบการนัดหมายในการสนทนาครั้งนี้'}
+📅 **นัดหมาย:**
+${appointmentText}
 
-## 5. งานที่ต้องดำเนินการ
-${actions.length > 0
-    ? actions.map(m => `- ${m.full_name}: "${m.message_text}"`).join('\n')
-    : 'ไม่พบงานที่ต้องดำเนินการ'}
-
-## 6. ข้อสรุป
-⚠️ *หมายเหตุ: นี่คือสรุปโดยระบบสำรอง เนื่องจาก AI หลักไม่พร้อมใช้งาน*
-**แนะนำให้ตรวจสอบ Gemini API key ในระบบ**`;
+✅ **งานที่ต้องทำ:**
+${actionText}`;
 }
 app.get('/api/chat-summary/history', authenticateToken, async (req, res) => {
     const client = await getConnection();
