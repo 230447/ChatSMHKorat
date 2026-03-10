@@ -22,6 +22,13 @@ button, .btn, a.btn, input[type="submit"],
     min-width: 44px;
 }
 
+/* ✅ เพิ่มส่วนนี้ต่อท้าย */
+.btn-secondary, .btn-primary, .close-modal {
+    min-width: fit-content !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+}
+
 /* ป้องกัน text overflow บน mobile */
 * {
     word-break: break-word;
