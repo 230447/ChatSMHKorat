@@ -8,7 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* (CSS เดิมเหมือนเดิม ไม่ต้องเปลี่ยน) */
+        /* ===== ปรับสำหรับการพิมพ์ A4 ===== */
+        @page {
+            size: A4;
+            margin: 1.5cm 1.5cm 1.5cm 1.5cm;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -23,7 +28,7 @@
             padding: 24px 16px 40px;
         }
 
-        /* Toolbar */
+        /* Toolbar - ไม่แสดงเวลาพิมพ์ */
         .toolbar {
             position: fixed;
             top: 20px;
@@ -58,7 +63,7 @@
         .btn-print { background: #1e5799; color: white; }
         .btn-pdf { background: #27ae60; color: white; }
 
-        /* Main Paper */
+        /* Main Paper - ปรับสเกลให้พอดี A4 */
         .paper {
             max-width: 1000px;
             margin: 0 auto;
@@ -66,6 +71,9 @@
             border-radius: 20px;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
             overflow: hidden;
+            /* เผื่อขอบเวลาพิมพ์ */
+            page-break-after: avoid;
+            page-break-inside: avoid;
         }
 
         /* Header Gradient */
@@ -74,6 +82,9 @@
             padding: 40px 40px 30px;
             position: relative;
             color: white;
+            /* สำหรับการพิมพ์ */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .hospital-badge {
@@ -130,7 +141,7 @@
             color: #fff3d6;
         }
 
-        /* Date Range Picker */
+        /* Date Range Picker - ไม่แสดงเวลาพิมพ์ */
         .date-range-picker {
             background: rgba(255,255,255,0.1);
             border-radius: 15px;
@@ -262,6 +273,9 @@
             padding: 15px;
             text-align: center;
             backdrop-filter: blur(5px);
+            /* สำหรับการพิมพ์ */
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         .stat-icon {
@@ -316,6 +330,8 @@
         /* Section */
         .section {
             margin-bottom: 35px;
+            /* ป้องกันการตัดกลางหน้าเวลาพิมพ์ */
+            page-break-inside: avoid;
         }
 
         .section-header {
@@ -397,18 +413,22 @@
             font-size: 15px;
         }
 
-        /* Tasks Table */
+        /* Tasks Table - ปรับให้แสดงใน A4 */
         .tasks-table {
             width: 100%;
             border-collapse: collapse;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            /* ป้องกันตารางถูกตัด */
+            page-break-inside: avoid;
         }
 
         .tasks-table thead {
             background: #1a3a5c;
             color: white;
+            /* ให้หัวตารางแสดงซ้ำทุกหน้าถ้าตารางยาว */
+            display: table-header-group;
         }
 
         .tasks-table th {
@@ -421,6 +441,10 @@
         .tasks-table td {
             padding: 15px 20px;
             border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tasks-table tbody tr {
+            page-break-inside: avoid;
         }
 
         .tasks-table tbody tr:hover {
@@ -464,6 +488,8 @@
             justify-content: space-between;
             font-size: 13px;
             color: #718096;
+            /* ให้ footer อยู่ท้ายหน้าเสมอ */
+            page-break-after: avoid;
         }
 
         .footer-left i {
@@ -490,22 +516,66 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Print Styles */
+        /* ===== Print Styles - A4 ===== */
         @media print {
             body {
                 background: white;
                 padding: 0;
+                margin: 0;
             }
-            .toolbar, .date-range-picker {
-                display: none;
+            
+            .toolbar, .date-range-picker, .no-print {
+                display: none !important;
             }
+            
             .paper {
+                max-width: 100%;
                 box-shadow: none;
                 border-radius: 0;
+                margin: 0;
+                page-break-after: avoid;
             }
+            
             .header-gradient {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+                background: linear-gradient(135deg, #1a3a5c 0%, #1e5799 50%, #2980b9 100%) !important;
+            }
+            
+            .stat-card {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                background: rgba(255,255,255,0.1) !important;
+                border: 1px solid rgba(255,255,255,0.2) !important;
+            }
+            
+            .topic-card {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .tasks-table thead {
+                background: #1a3a5c !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            /* ปรับขนาดตัวอักษรให้พอดี A4 */
+            body, .paper, .content-area {
+                font-size: 12pt;
+            }
+            
+            h1 { font-size: 24pt; }
+            h2 { font-size: 18pt; }
+            h3 { font-size: 16pt; }
+            
+            .report-title {
+                font-size: 28pt;
+            }
+            
+            /* กันไม่ให้ section ถูกตัดกลาง */
+            .section, .appointment-item, .tasks-table tr {
+                page-break-inside: avoid;
             }
         }
 
@@ -761,7 +831,7 @@ function applyDateRange() {
 }
 
 // ============================================
-// Parse Summary Function - แก้ไขให้แสดงทั้งหมด
+// Parse Summary Function
 // ============================================
 function parseDepartmentSummary(summaryText) {
     const result = {
@@ -779,36 +849,31 @@ function parseDepartmentSummary(summaryText) {
             result.topic = topicMatch[1].replace(/\*\*/g, '').trim();
         }
 
-        // Extract Appointments (📅 section) - ดึงทั้งหมด ไม่จำกัด
+        // Extract Appointments (📅 section) - ดึงทั้งหมด
         const apptMatch = summaryText.match(/📅[^:：\n]*[:：]\s*([\s\S]*?)(?=✅|---|$)/);
         if (apptMatch) {
             const apptText = apptMatch[1].trim();
             if (apptText && apptText !== 'ไม่มี' && !apptText.includes('ไม่มี')) {
-                // แยกทุกบรรทัดที่ไม่ว่าง
                 const lines = apptText.split('\n')
                     .filter(line => line.trim() && !line.includes('ไม่มี') && line.trim() !== '');
                 
-                // เก็บทุกอัน ไม่จำกัดจำนวน
                 result.appointments = lines.map(line => {
                     return line.replace(/^[•\-\*]\s*/, '').replace(/\*\*/g, '').trim();
                 }).filter(text => text && text.length > 0);
             }
         }
 
-        // Extract Tasks (✅ section) - ดึงทั้งหมด ไม่จำกัด
+        // Extract Tasks (✅ section) - ดึงทั้งหมด
         const taskMatch = summaryText.match(/✅[^:：\n]*[:：]\s*([\s\S]*?)(?=---|$)/);
         if (taskMatch) {
             const taskText = taskMatch[1].trim();
             if (taskText && taskText !== 'ไม่มี' && !taskText.includes('ไม่มี')) {
-                // แยกทุกบรรทัดที่ไม่ว่าง
                 const lines = taskText.split('\n')
                     .filter(line => line.trim() && !line.includes('ไม่มี') && line.trim() !== '');
                 
-                // เก็บทุกอัน ไม่จำกัดจำนวน
                 result.tasks = lines.map(line => {
                     const cleanLine = line.replace(/^[•\-\*]\s*/, '').replace(/\*\*/g, '').trim();
                     
-                    // Try to extract owner and task
                     const ownerMatch = cleanLine.match(/^([^:：]+)[：:]\s*(.+)/) ||
                                      cleanLine.match(/^(.+?)\s+(?:ต้อง|จะ|ช่วย)\s+(.+)/);
                     
@@ -834,7 +899,7 @@ function parseDepartmentSummary(summaryText) {
 }
 
 // ============================================
-// Render Report - แก้ไขให้แสดงทั้งหมด ไม่มี slice
+// Render Report
 // ============================================
 function renderReport(parsed, stats, deptName, dateRangeText) {
     const contentArea = document.getElementById('contentArea');
@@ -876,7 +941,7 @@ function renderReport(parsed, stats, deptName, dateRangeText) {
         </div>
     `;
 
-    // Section 2: Appointments - แสดงทั้งหมด ไม่จำกัด
+    // Section 2: Appointments
     html += `
         <div class="section">
             <div class="section-header">
@@ -915,7 +980,7 @@ function renderReport(parsed, stats, deptName, dateRangeText) {
     }
     html += '</div>';
 
-    // Section 3: Tasks - แสดงทั้งหมด ไม่จำกัด
+    // Section 3: Tasks
     html += `
         <div class="section">
             <div class="section-header">
@@ -1130,7 +1195,7 @@ async function loadReport() {
 }
 
 // ============================================
-// PDF Download
+// PDF Download - ปรับให้เป็น A4
 // ============================================
 function downloadPDF() {
     const btn = event.target.closest('button');
@@ -1144,22 +1209,27 @@ function downloadPDF() {
     const endDate = document.getElementById('endDateInput').value;
     const dateStr = startDate === endDate ? startDate : `${startDate}_to_${endDate}`;
     
+    // ตั้งค่าสำหรับ A4
+    const opt = {
+        margin:        [0.5, 0.5, 0.5, 0.5], // บน, ขวา, ล่าง, ซ้าย (หน่วยเป็นนิ้ว)
+        filename:      `รายงานแผนก_${deptName}_${dateStr}.pdf`,
+        image:         { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            letterRendering: true
+        },
+        jsPDF:        { 
+            unit: 'in', 
+            format: 'a4',      // กำหนดขนาด A4
+            orientation: 'portrait' // แนวตั้ง
+        },
+        pagebreak: { mode: ['css', 'legacy'] } // ให้ตัดหน้าตาม CSS
+    };
+    
     html2pdf()
-        .set({
-            margin: [0.5, 0.5, 0.5, 0.5],
-            filename: `รายงานแผนก_${deptName}_${dateStr}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { 
-                scale: 2,
-                useCORS: true,
-                logging: false
-            },
-            jsPDF: { 
-                unit: 'in', 
-                format: 'a4', 
-                orientation: 'portrait' 
-            }
-        })
+        .set(opt)
         .from(document.getElementById('reportContent'))
         .save()
         .then(() => {
