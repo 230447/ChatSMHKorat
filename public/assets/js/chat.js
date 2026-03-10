@@ -4678,7 +4678,7 @@ showSummaryResult(data) {
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px;">
                     <div><strong>📌 ห้อง:</strong> ${stats.room_name || this.currentRoom.room_name}</div>
                     <div><strong>💬 ข้อความ:</strong> ${stats.message_count || 0} ข้อความ</div>
-                    <div><strong>👥 ผู้ร่วม:</strong> ${stats.participant_count || 0} คน</div>
+                   
                     <div><strong>📅 ช่วงเวลา:</strong> ${stats.timeframe || 'ไม่ระบุ'}</div>
                 </div>
                 

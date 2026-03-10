@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานแผนก - โรงพยาบาลเซนต์เมรี่</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --blue-dark:   #1a3a5c;
+            --blue-mid:    #1e5799;
+            --blue-light:  #2980b9;
+            --accent:      #e8a020;
+            --green:       #27ae60;
+            --green-soft:  #eafaf1;
+            --red:         #c0392b;
+            --gray-100:    #f8f9fa;
+            --gray-200:    #e9ecef;
+            --gray-400:    #adb5bd;
+            --gray-600:    #6c757d;
+            --text:        #1a2533;
+            --radius:      10px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #dce5ef;
+            font-family: 'Sarabun', sans-serif;
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px 16px 80px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            position: fixed;
+            top: 18px; right: 20px;
+            display: flex; gap: 10px;
+            z-index: 999;
+        }
+        .toolbar button {
+            padding: 9px 18px;
+            border: none; border-radius: 20px;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            display: flex; align-items: center; gap: 7px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.18);
+            transition: all .25s;
+        }
+        .toolbar button:hover { transform: translateY(-2px); }
+        .btn-print { background: var(--blue-mid); color: white; }
+        .btn-pdf   { background: var(--green); color: white; }
+        .btn-back  { background: white; color: var(--text); }
+        .btn-refresh { background: var(--accent); color: white; }
+
+        /* Paper */
+        .paper {
+            max-width: 860px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 32px rgba(26,58,92,0.18);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header-band {
+            background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-mid) 60%, var(--blue-light) 100%);
+            padding: 28px 36px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header-band::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+            background: linear-gradient(90deg, var(--accent) 0%, #f5d27a 50%, var(--accent) 100%);
+        }
+        .header-top {
+            display: flex; align-items: center; gap: 18px;
+            margin-bottom: 20px;
+        }
+        .logo-circle {
+            width: 54px; height: 54px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.35);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 800; color: white;
+            flex-shrink: 0;
+        }
+        .hospital-info h1 { font-size: 18px; font-weight: 700; color: white; }
+        .hospital-info p  { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+
+        .doc-title {
+            font-size: 22px; font-weight: 800; color: white;
+            text-align: center; margin-bottom: 8px;
+        }
+        .dept-name-display {
+            text-align: center;
+            font-size: 15px; color: rgba(255,255,255,0.85);
+            margin-bottom: 20px;
+        }
+        .dept-name-display span {
+            background: rgba(232,160,32,0.25);
+            border: 1px solid rgba(232,160,32,0.5);
+            border-radius: 20px;
+            padding: 4px 16px;
+            color: #fde68a;
+            font-weight: 600;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .stat-box {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+            text-align: center;
+        }
+        .stat-box .stat-num {
+            font-size: 22px; font-weight: 800; color: white;
+            line-height: 1;
+        }
+        .stat-box .stat-label {
+            font-size: 11px; color: rgba(255,255,255,0.65);
+            margin-top: 4px;
+        }
+        .stat-box .stat-icon {
+            font-size: 14px; margin-bottom: 4px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Body */
+        .body-wrap { padding: 30px 36px 24px; }
+
+        /* Date bar */
+        .date-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 10px 16px;
+            margin-bottom: 24px;
+            font-size: 13px; color: var(--gray-600);
+        }
+        .date-bar strong { color: var(--blue-dark); }
+
+        /* Section */
+        .section { margin-bottom: 28px; }
+        .section-head {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 14px;
+            padding-bottom: 9px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+        .icon-badge {
+            width: 34px; height: 34px;
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+        }
+        .badge-blue   { background: #dbeafe; }
+        .badge-green  { background: #d1fae5; }
+        .badge-orange { background: #fff7ed; }
+        .section-head h2 { font-size: 15px; font-weight: 700; color: var(--blue-dark); }
+
+        /* Topic card */
+        .topic-card {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e8f4fd 100%);
+            border: 1px solid #bee3f8;
+            border-left: 4px solid var(--blue-mid);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            font-size: 15px;
+            line-height: 1.9;
+            color: var(--text);
+        }
+
+        /* Appointment list */
+        .appt-list { display: flex; flex-direction: column; gap: 8px; }
+        .appt-item {
+            display: flex; align-items: flex-start; gap: 14px;
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 12px 16px;
+            border-left: 3px solid var(--accent);
+        }
+        .appt-time {
+            font-size: 13px; font-weight: 700;
+            color: var(--accent);
+            white-space: nowrap;
+            min-width: 80px;
+        }
+        .appt-detail { font-size: 13.5px; line-height: 1.6; }
+        .appt-who {
+            font-size: 12px; color: var(--gray-600);
+            margin-top: 2px;
+        }
+
+        /* Task table */
+        .task-table {
+            width: 100%; border-collapse: collapse; font-size: 13px;
+        }
+        .task-table thead tr { background: var(--blue-dark); color: white; }
+        .task-table thead th {
+            padding: 10px 14px; text-align: left;
+            font-size: 12.5px; font-weight: 600;
+        }
+        .task-table thead th:first-child { border-radius: 6px 0 0 0; }
+        .task-table thead th:last-child  { border-radius: 0 6px 0 0; }
+        .task-table tbody tr { border-bottom: 1px solid var(--gray-200); }
+        .task-table tbody tr:hover { background: var(--gray-100); }
+        .task-table tbody td { padding: 10px 14px; vertical-align: top; line-height: 1.6; }
+
+        .owner-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            background: #dbeafe; color: #1e40af;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 12px; font-weight: 600;
+        }
+
+        /* Empty state */
+        .empty-box {
+            text-align: center; padding: 22px;
+            color: var(--gray-600); font-size: 13px;
+            background: var(--gray-100); border-radius: var(--radius);
+        }
+
+        /* Loading / Error */
+        .state-box {
+            text-align: center; padding: 60px 20px; color: var(--gray-600);
+        }
+        .state-box i { font-size: 42px; margin-bottom: 16px; display: block; }
+
+        /* Footer */
+        .footer-band {
+            background: var(--gray-100);
+            border-top: 2px solid var(--gray-200);
+            padding: 14px 36px;
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 8px;
+        }
+        .footer-left  { font-size: 12px; color: var(--gray-600); }
+        .footer-left strong { color: var(--blue-dark); }
+        .footer-right { font-size: 11px; color: var(--gray-400); font-style: italic; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .toolbar { display: none !important; }
+            .paper { box-shadow: none; max-width: 100%; }
+        }
+
+        @media (max-width: 600px) {
+            .body-wrap { padding: 20px 18px; }
+            .header-band { padding: 20px 18px 16px; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .toolbar { top: 10px; right: 10px; gap: 6px; }
+            .toolbar button { padding: 7px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+    <button class="btn-back" onclick="history.length>1?history.back():(location.href='/chat')">
+        <i class="fas fa-arrow-left"></i> กลับ
+    </button>
+    <button class="btn-refresh" id="btnRefresh">
+        <i class="fas fa-sync-alt"></i> สร้างใหม่
+    </button>
+    <button class="btn-print" onclick="window.print()">
+        <i class="fas fa-print"></i> พิมพ์
+    </button>
+    <button class="btn-pdf" id="btnPDF">
+        <i class="fas fa-file-pdf"></i> PDF
+    </button>
+</div>
+
+<div class="paper" id="reportContent">
+
+    <!-- Header -->
+    <div class="header-band">
+        <div class="header-top">
+            <div class="logo-circle">SMH</div>
+            <div class="hospital-info">
+                <h1>โรงพยาบาลเซนต์เมรี่ นครราชสีมา</h1>
+                <p>Saint Mary's Hospital · Nakhon Ratchasima</p>
+            </div>
+        </div>
+
+        <div class="doc-title">รายงานสรุปประจำแผนก</div>
+        <div class="dept-name-display">
+            <span id="deptNameDisplay">กำลังโหลด...</span>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-comments"></i></div>
+                <div class="stat-num" id="statMsgs">—</div>
+                <div class="stat-label">ข้อความวันนี้</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-num" id="statPeople">—</div>
+                <div class="stat-label">ผู้เข้าร่วม</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                <div class="stat-num" id="statAppts">—</div>
+                <div class="stat-label">นัดหมาย</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+                <div class="stat-num" id="statTasks">—</div>
+                <div class="stat-label">งานที่ต้องทำ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Body -->
+    <div class="body-wrap" id="reportBody">
+        <div class="state-box">
+            <i class="fas fa-circle-notch spin" style="color:var(--blue-mid)"></i>
+            <p>กำลังโหลดข้อมูลแผนก...</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-band">
+        <div class="footer-left">
+            สร้างโดย <strong>ระบบ AI อัตโนมัติ</strong> · โรงพยาบาลเซนต์เมรี่ นครราชสีมา
+        </div>
+        <div class="footer-right" id="footerTime">—</div>
+    </div>
+</div>
+
+<script>
+/* ─── Thai Date ─── */
+function thaiNow() {
+    const now = new Date();
+    const date = now.toLocaleDateString('th-TH', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        timeZone: 'Asia/Bangkok'
+    });
+    const time = now.toLocaleTimeString('th-TH', {
+        hour: '2-digit', minute: '2-digit',
+        timeZone: 'Asia/Bangkok'
+    });
+    return { date, time, now };
+}
+
+function escH(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── Parse summary text → 3 sections ─── */
+function parseDeptSummary(text) {
+    if (!text) return { topic: '', appointments: [], tasks: [] };
+
+    const result = { topic: '', appointments: [], tasks: [] };
+
+    // Extract topic (🗣️ section)
+    const topicMatch = text.match(/🗣️[^:：]*[:：]\s*([^\n📅✅]+)/);
+    if (topicMatch) result.topic = topicMatch[1].replace(/\*\*/g,'').trim();
+
+    // Extract appointments (📅 section)
+    const apptMatch = text.match(/📅[^:：\n]*[:：]\s*([\s\S]*?)(?=✅|$)/);
+    if (apptMatch) {
+        const raw = apptMatch[1].trim();
+        if (raw && raw !== 'ไม่มี') {
+            const lines = raw.split('\n').filter(l => l.trim() && l.trim() !== 'ไม่มี');
+            lines.forEach(line => {
+                const clean = line.replace(/^[•\-\*]\s*/, '').replace(/\*\*/g,'').trim();
+                if (clean) result.appointments.push(clean);
+            });
+        }
+    }
+
+    // Extract tasks (✅ section)
+    const taskMatch = text.match(/✅[^:：\n]*[:：]\s*([\s\S]*?)(?=---|$)/);
+    if (taskMatch) {
+        const raw = taskMatch[1].trim();
+        if (raw && raw !== 'ไม่มี') {
+            const lines = raw.split('\n').filter(l => l.trim() && l.trim() !== 'ไม่มี');
+            lines.forEach(line => {
+                const clean = line.replace(/^[•\-\*]\s*/, '').replace(/\*\*/g,'').trim();
+                if (!clean) return;
+
+                // แยก "ชื่อ: งาน" หรือ "ชื่อ ต้องดำเนินการเรื่อง ..."
+                const ownerMatch = clean.match(/^([^:：]+)[：:]\s*(.+)/) ||
+                                   clean.match(/^(.+?)\s+ต้องดำเนินการเรื่อง\s+(.+)/);
+                if (ownerMatch) {
+                    result.tasks.push({ owner: ownerMatch[1].trim(), task: ownerMatch[2].replace(/^[""]|[""]$/g,'').trim() });
+                } else {
+                    result.tasks.push({ owner: '—', task: clean.replace(/^[""]|[""]$/g,'').trim() });
+                }
+            });
+        }
+    }
+
+    return result;
+}
+
+/* ─── Render Body ─── */
+function renderReport(parsed, stats) {
+    // Update stat boxes
+    document.getElementById('statMsgs').textContent   = stats.messageCount   || 0;
+    document.getElementById('statPeople').textContent = stats.participantCount || 0;
+    document.getElementById('statAppts').textContent  = parsed.appointments.length;
+    document.getElementById('statTasks').textContent  = parsed.tasks.length;
+
+    let html = '';
+
+    // Date bar
+    const { date, time } = thaiNow();
+    html += `
+    <div class="date-bar">
+        <div><i class="fas fa-calendar-day" style="margin-right:6px;color:var(--blue-mid)"></i>
+            รายงานประจำวัน <strong>${date}</strong>
+        </div>
+        <div style="font-size:12px">สร้างเมื่อ ${time} น.</div>
+    </div>`;
+
+    /* ── ส่วนที่ 1: วันนี้คุยเรื่องอะไร ── */
+    html += `
+    <div class="section">
+        <div class="section-head">
+            <div class="icon-badge badge-blue">
+                <i class="fas fa-comment-dots" style="color:#1e5799"></i>
+            </div>
+            <h2>วันนี้แผนกคุยเรื่องอะไร</h2>
+        </div>
+        <div class="topic-card">
+            ${parsed.topic
+                ? escH(parsed.topic)
+                : '<span style="color:#999">ไม่มีข้อความในวันนี้</span>'}
+        </div>
+    </div>`;
+
+    /* ── ส่วนที่ 2: นัดหมาย ── */
+    html += `
+    <div class="section">
+        <div class="section-head">
+            <div class="icon-badge badge-orange">
+                <i class="fas fa-calendar-alt" style="color:#c05621"></i>
+            </div>
+            <h2>นัดหมายของแผนก</h2>
+        </div>`;
+
+    if (parsed.appointments.length > 0) {
+        html += '<div class="appt-list">';
+        parsed.appointments.forEach(appt => {
+            // พยายามดึงเวลาออกมา
+            const timeMatch = appt.match(/(\d{1,2}[:.]\d{2}|\d{1,2}\s*โมง|\d{1,2}\s*น\.|บ่าย\w*|เช้า\w*|เย็น\w*)/);
+            const timeStr   = timeMatch ? timeMatch[0] : '';
+            const detail    = timeStr ? appt.replace(timeStr, '').replace(/^[:\-\s]+/, '').trim() : appt;
+
+            html += `
+            <div class="appt-item">
+                <div class="appt-time">
+                    <i class="fas fa-clock" style="margin-right:4px"></i>
+                    ${timeStr || 'ไม่ระบุ'}
+                </div>
+                <div>
+                    <div class="appt-detail">${escH(detail || appt)}</div>
+                </div>
+            </div>`;
+        });
+        html += '</div>';
+    } else {
+        html += '<div class="empty-box"><i class="fas fa-calendar-times" style="margin-right:6px;color:var(--gray-400)"></i>ไม่มีนัดหมายในวันนี้</div>';
+    }
+    html += '</div>';
+
+    /* ── ส่วนที่ 3: งานที่ต้องทำ ── */
+    html += `
+    <div class="section">
+        <div class="section-head">
+            <div class="icon-badge badge-green">
+                <i class="fas fa-check-square" style="color:#065f46"></i>
+            </div>
+            <h2>งานที่ต้องทำ</h2>
+        </div>`;
+
+    if (parsed.tasks.length > 0) {
+        html += `
+        <table class="task-table">
+            <thead>
+                <tr>
+                    <th style="width:30%">ผู้รับผิดชอบ</th>
+                    <th>งานที่ต้องทำ</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        parsed.tasks.forEach(t => {
+            html += `
+            <tr>
+                <td><span class="owner-badge"><i class="fas fa-user"></i> ${escH(t.owner)}</span></td>
+                <td>${escH(t.task)}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+    } else {
+        html += '<div class="empty-box"><i class="fas fa-check-circle" style="margin-right:6px;color:var(--green)"></i>ไม่มีงานที่ต้องดำเนินการเพิ่มเติม</div>';
+    }
+    html += '</div>';
+
+    document.getElementById('reportBody').innerHTML = html;
+}
+
+/* ─── Main ─── */
+async function loadReport() {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) { location.href = '/login'; return; }
+
+    document.getElementById('reportBody').innerHTML = `
+        <div class="state-box">
+            <i class="fas fa-circle-notch spin" style="color:var(--blue-mid)"></i>
+            <p>กำลังดึงข้อมูลและสร้างสรุปแผนก...</p>
+        </div>`;
+
+    try {
+        // ดึงข้อมูล user เพื่อรู้ department
+        const meRes  = await fetch('/api/me', { headers: { 'Authorization': `Bearer ${token}` } });
+        const meData = await meRes.json();
+        if (!meData.success) throw new Error('ไม่สามารถดึงข้อมูลผู้ใช้ได้');
+
+        const user       = meData.user;
+        const deptId     = user.department_id;
+        const deptName   = user.department_name || 'ไม่ระบุแผนก';
+
+        document.getElementById('deptNameDisplay').textContent = deptName;
+        document.title = `รายงานแผนก ${deptName} - โรงพยาบาลเซนต์เมรี่`;
+
+        // หาห้องแผนก
+        const roomsRes  = await fetch('/api/chat-rooms', { headers: { 'Authorization': `Bearer ${token}` } });
+        const roomsData = await roomsRes.json();
+        const deptRoom  = roomsData.rooms?.find(r => r.room_type === 'department' && r.department_id == deptId);
+
+        if (!deptRoom) throw new Error('ไม่พบห้องสนทนาของแผนก กรุณาติดต่อผู้ดูแลระบบ');
+
+        // เรียก summary API
+        const today = new Date().toISOString().split('T')[0];
+        const sumRes = await fetch('/api/chat-summary', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                room_id: deptRoom.room_id,
+                message_count: 100,
+                start_date: today,
+                end_date: today
+            })
+        });
+
+        const sumData = await sumRes.json();
+
+        if (!sumData.success) {
+            // ถ้าไม่มีข้อความวันนี้
+            if (sumData.error?.includes('ไม่มีข้อความ')) {
+                document.getElementById('statMsgs').textContent   = '0';
+                document.getElementById('statPeople').textContent = '0';
+                document.getElementById('statAppts').textContent  = '0';
+                document.getElementById('statTasks').textContent  = '0';
+                const { date, time } = thaiNow();
+                document.getElementById('reportBody').innerHTML = `
+                    <div class="date-bar">
+                        <div><i class="fas fa-calendar-day" style="margin-right:6px;color:var(--blue-mid)"></i>
+                            รายงานประจำวัน <strong>${date}</strong>
+                        </div>
+                        <div style="font-size:12px">สร้างเมื่อ ${time} น.</div>
+                    </div>
+                    <div class="state-box" style="padding:40px 20px">
+                        <i class="fas fa-inbox" style="color:var(--gray-400)"></i>
+                        <p style="font-weight:600">ยังไม่มีการสนทนาในวันนี้</p>
+                        <p style="font-size:13px;margin-top:6px;color:var(--gray-400)">เมื่อมีข้อความในห้องแผนก รายงานจะแสดงที่นี่</p>
+                    </div>`;
+                return;
+            }
+            throw new Error(sumData.error || 'สร้างสรุปไม่สำเร็จ');
+        }
+
+        // นับ stats จาก messages
+        const msgsRes  = await fetch(`/api/chat-rooms/${deptRoom.room_id}/messages?limit=100`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const msgsData = await msgsRes.json();
+        const todayMsgs = (msgsData.messages || []).filter(m => {
+            const d = new Date(m.created_at);
+            return d.toISOString().split('T')[0] === today;
+        });
+        const uniquePeople = new Set(todayMsgs.map(m => m.sender_id)).size;
+
+        // Parse และ Render
+        const parsed = parseDeptSummary(sumData.summary);
+        renderReport(parsed, {
+            messageCount:    todayMsgs.length,
+            participantCount: uniquePeople
+        });
+
+        // Footer time
+        const { date, time } = thaiNow();
+        document.getElementById('footerTime').textContent = `สร้างรายงานเมื่อ ${date} เวลา ${time} น.`;
+
+    } catch (err) {
+        console.error('Report error:', err);
+        document.getElementById('reportBody').innerHTML = `
+            <div class="state-box">
+                <i class="fas fa-exclamation-triangle" style="color:#e67e22"></i>
+                <p style="font-weight:600;margin-bottom:8px">เกิดข้อผิดพลาด</p>
+                <p style="font-size:13px;color:#999">${escH(err.message)}</p>
+            </div>`;
+    }
+}
+
+// Refresh button
+document.getElementById('btnRefresh').addEventListener('click', loadReport);
+
+// PDF
+document.getElementById('btnPDF').addEventListener('click', () => {
+    const btn = document.getElementById('btnPDF');
+    btn.innerHTML = '<i class="fas fa-circle-notch spin"></i> กำลังสร้าง...';
+    btn.disabled = true;
+    const deptName = document.getElementById('deptNameDisplay').textContent;
+    const { date } = thaiNow();
+    html2pdf().set({
+        margin: [10,10,10,10],
+        filename: `รายงานแผนก_${deptName}_${date}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(document.getElementById('reportContent')).save()
+      .then(() => { btn.innerHTML = '<i class="fas fa-file-pdf"></i> PDF'; btn.disabled = false; });
+});
+
+// Start
+loadReport();
+</script>
+</body>
+</html>

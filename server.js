@@ -1362,6 +1362,8 @@ const quotaManager = {
         }, 60 * 60 * 1000);
     }
 };
+app.get('/department-report', (req, res) => 
+    res.sendFile(path.join(__dirname, 'public', 'department-report.html')));
 // ========================================
 // Socket.IO
 // ========================================
