@@ -4568,9 +4568,23 @@ showDateRangePicker() {
                 </div>
             </div>
             <div class="modal-footer" style="padding:15px 20px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end;">
-                <button class="btn btn-secondary close-modal" style="padding:10px 20px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">
-                    <i class="fas fa-times"></i> ยกเลิก
-                </button>
+               <button class="btn btn-secondary close-modal" style="
+    padding: 10px 20px; 
+    background: #6c757d; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+    font-weight: 500;
+    line-height: 1;
+">
+    <i class="fas fa-times" style="font-size: 13px;"></i> ยกเลิก
+</button>
                 <button id="confirmDateRange" class="btn btn-primary" style="padding:10px 20px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:6px; cursor:pointer;">
                     <i class="fas fa-brain"></i> สรุปการสนทนา
                 </button>
