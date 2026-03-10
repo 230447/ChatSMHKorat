@@ -749,7 +749,7 @@
 #aiSummaryModal .summary-actions button {
     padding: 12px 24px;
     border: none;
-    border-radius: 12px;
+    border-radius: 50px;  /* ให้เป็นทรงกลมมากขึ้น */
     font-size: 14px;
     font-weight: 600;
     font-family: 'Prompt', sans-serif;
@@ -762,44 +762,63 @@
     position: relative;
     overflow: hidden;
     min-width: 100px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    letter-spacing: 0.3px;
 }
 
 /* ===== ปุ่มปิด (สีเทา) ===== */
-#aiSummaryModal .summary-actions .btn-secondary,
-#aiSummaryModal .summary-actions .close-modal {
-    background: #f1f5f9 !important;
-    color: #475569 !important;
-    border: 1px solid #e2e8f0 !important;
+#aiSummaryModal .summary-actions .close-modal-btn,
+#aiSummaryModal .summary-actions .btn-close {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+    border: 1px solid #5a6268;
 }
 
-#aiSummaryModal .summary-actions .btn-secondary:hover,
-#aiSummaryModal .summary-actions .close-modal:hover {
-    background: #e2e8f0 !important;
+#aiSummaryModal .summary-actions .close-modal-btn:hover,
+#aiSummaryModal .summary-actions .btn-close:hover {
+    background: linear-gradient(135deg, #5a6268, #484e53);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 8px 15px rgba(108, 117, 125, 0.4);
+}
+/* ===== ปุ่มยกเลิก (สีแดง) ===== */
+#aiSummaryModal .summary-actions #cancelSummaryBtn,
+#aiSummaryModal .summary-actions .btn-cancel {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    border: 1px solid #c82333;
+}
+
+#aiSummaryModal .summary-actions #cancelSummaryBtn:hover,
+#aiSummaryModal .summary-actions .btn-cancel:hover {
+    background: linear-gradient(135deg, #c82333, #b21f2d);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(220, 53, 69, 0.4);
 }
 
 /* ===== ปุ่มคัดลอก (สีฟ้า) ===== */
-#copySummaryBtn {
-    background: linear-gradient(135deg, #3498db, #2980b9) !important;
-    color: white !important;
+#aiSummaryModal .summary-actions #copySummaryBtn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: 1px solid #2980b9;
 }
 
-#copySummaryBtn:hover {
+#aiSummaryModal .summary-actions #copySummaryBtn:hover {
+    background: linear-gradient(135deg, #2980b9, #216795);
     transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(52, 152, 219, 0.4) !important;
+    box-shadow: 0 8px 15px rgba(52, 152, 219, 0.4);
 }
 
 /* ===== ปุ่มบันทึก (สีเขียว) ===== */
-#saveSummaryBtn {
-    background: linear-gradient(135deg, #2ecc71, #27ae60) !important;
-    color: white !important;
+#aiSummaryModal .summary-actions #saveSummaryBtn {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    border: 1px solid #27ae60;
 }
 
-#saveSummaryBtn:hover {
+#aiSummaryModal .summary-actions #saveSummaryBtn:hover {
+    background: linear-gradient(135deg, #27ae60, #219653);
     transform: translateY(-2px);
-    box-shadow: 0 8px 15px rgba(46, 204, 113, 0.4) !important;
+    box-shadow: 0 8px 15px rgba(46, 204, 113, 0.4);
 }
 
 /* ===== ปุ่มดูรายงาน (สีม่วง) ===== */
