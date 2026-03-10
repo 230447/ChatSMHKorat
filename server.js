@@ -827,11 +827,10 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
             summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
         } else {
             try {
-                // ✅ แก้ไข: ใช้ model names ที่ถูกต้อง
                 const models = [
-                    'models/gemini-1.5-pro',    // ใช้ model path แบบเต็ม
-                    'models/gemini-1.5-flash',
-                    'models/gemini-pro'
+                    'gemini-1.5-flash',
+                    'gemini-1.5-pro',
+                    'gemini-2.0-flash'
                 ];
                 
                 let generatedSummary = null;
@@ -1360,6 +1359,8 @@ app.use((err, req, res, next) => {
 // Start server
 // ========================================
 async function startServer() {
+    console.log('🔑 GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
+    console.log('🔑 Key prefix:', process.env.GEMINI_API_KEY?.substring(0, 8));
     try {
         console.log('🔄 Testing database connection...');
         const testClient = await pool.connect();
