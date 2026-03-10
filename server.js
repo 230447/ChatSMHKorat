@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 require('dotenv').config();
-
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
@@ -17,7 +17,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const app = express();
 const server = http.createServer(app);
@@ -818,61 +818,107 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         // ✅ กำหนดค่า timeframe
         const timeframe = actualTimeframe;
 
-      let summary;
-        const apiKey = process.env.ANTHROPIC_API_KEY;
-
+        // ✅ ตรวจสอบ API key และใช้ model ที่ถูกต้อง
+        let summary;
+        const apiKey = process.env.GEMINI_API_KEY;
+        
         if (!apiKey) {
-            console.warn('⚠️ No Anthropic API key, using fallback');
+            console.warn('⚠️ No Gemini API key, using fallback summary');
             summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
         } else {
             try {
-                console.log('🔄 Calling Claude API...');
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: 4096,
-                        messages: [{
-                            role: 'user',
-                            content: `คุณคือผู้ช่วยสรุปการประชุมของโรงพยาบาล จงสรุปบทสนทนานี้เป็นภาษาไทย
+                const models = [
+                    'gemini-1.5-flash',
+                    'gemini-1.5-pro',
+                    'gemini-2.0-flash'
+                ];
+                
+                let generatedSummary = null;
+                let lastError = null;
 
-ห้อง: ${roomName}
-ช่วงเวลา: ${timeframe}
-ผู้เข้าร่วม: ${participants.join(', ')}
+                for (const modelName of models) {
+                    try {
+                        console.log(`🔄 Trying model: ${modelName}`);
+                        
+                        const model = genAI.getGenerativeModel({ 
+                            model: modelName,
+                            generationConfig: { 
+                                temperature: 0.3,
+                                maxOutputTokens: 4096
+                            }
+                        });
+                        
+                        const prompt = `คุณคือผู้ช่วยสรุปการประชุมของโรงพยาบาลที่มีความเชี่ยวชาญสูง 
+จงวิเคราะห์และสรุปบทสนทนาต่อไปนี้เป็นภาษาไทยที่สละสลวย เข้าใจง่าย พร้อมระบุการนัดหมายและงานที่ต้องทำ
 
-บทสนทนา:
+**บทสนทนา:**
 ${formattedMessages}
 
-สรุปในรูปแบบนี้:
+${custom_instruction ? `**คำแนะนำเพิ่มเติม:** ${custom_instruction}\n\n` : ''}
+
+**คำสั่ง:** กรุณาสรุปตามรูปแบบด้านล่างนี้เท่านั้น:
+
+---
+
 # 📋 รายงานสรุปการสนทนา
+
 ## 1. ข้อมูลทั่วไป
-- ห้องสนทนา, วันที่, ระยะเวลา, จำนวนข้อความ, ผู้เข้าร่วม
+- **ห้องสนทนา:** ${roomName}
+- **วันที่สรุป:** ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+- **ระยะเวลาสนทนา:** ${timeframe}
+- **จำนวนข้อความ:** ${messages.length} ข้อความ
+- **ผู้เข้าร่วม:** ${participants.length} คน (${participants.join(', ')})
+
 ## 2. สรุปภาพรวม
+[สรุปเนื้อหาการสนทนาโดยรวม 3-5 ประโยค]
+
 ## 3. ประเด็นสำคัญ
+1. [ประเด็นที่ 1]
+2. [ประเด็นที่ 2]
+3. [ประเด็นที่ 3]
+
 ## 4. การนัดหมาย
+| รายการ | วันที่/เวลา | สถานที่ | ผู้เกี่ยวข้อง |
+|--------|------------|---------|--------------|
+| [ชื่อการนัดหมาย] | [วัน/เวลา] | [สถานที่] | [ชื่อ] |
+
 ## 5. งานที่ต้องทำ
-## 6. ข้อสรุป`
-                        }]
-                    })
-                });
+| งาน | ผู้รับผิดชอบ | กำหนดส่ง |
+|-----|-------------|----------|
+| [ชื่องาน] | [ชื่อ] | [วันที่] |
 
-                const data = await response.json();
+## 6. ข้อสรุป
+[สรุปข้อตกลง]`;
 
-                if (data.content && data.content[0] && data.content[0].text) {
-                    summary = data.content[0].text;
-                    console.log('✅ Claude API success');
-                    summaryCache.set(cacheKey, { data: summary, timestamp: Date.now() });
-                } else {
-                    throw new Error('No response: ' + JSON.stringify(data));
+                        const result = await model.generateContent(prompt);
+                        const response = await result.response;
+                        generatedSummary = response.text();
+                        
+                        if (generatedSummary && generatedSummary.length > 0) {
+                            console.log(`✅ Success with model: ${modelName}`);
+                            break;
+                        }
+                    } catch (modelError) {
+                        console.log(`⚠️ Model ${modelName} failed:`, modelError.message);
+                        lastError = modelError;
+                        continue;
+                    }
                 }
 
+                if (generatedSummary) {
+                    summary = generatedSummary;
+                    // บันทึก summary ลง cache
+                    summaryCache.set(cacheKey, {
+                        data: summary,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    throw new Error('All models failed: ' + (lastError?.message || 'Unknown error'));
+                }
+                
             } catch (aiError) {
-                console.error('❌ Claude API failed:', aiError.message);
+                console.error('❌ All Gemini models failed:', aiError.message);
+                // ใช้ fallback
                 summary = createEnhancedFallbackSummary(messages, roomName, actualTimeframe, participants);
             }
         }
@@ -980,7 +1026,7 @@ ${actions.length > 0
 
 ## 6. ข้อสรุป
 ⚠️ *หมายเหตุ: นี่คือสรุปโดยระบบสำรอง เนื่องจาก AI หลักไม่พร้อมใช้งาน*
-**แนะนำให้ตรวจสอบ Claude API key ในระบบ**`;
+**แนะนำให้ตรวจสอบ Gemini API key ในระบบ**`;
 }
 app.get('/api/chat-summary/history', authenticateToken, async (req, res) => {
     const client = await getConnection();
