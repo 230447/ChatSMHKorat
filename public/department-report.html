@@ -129,6 +129,123 @@
             color: #fff3d6;
         }
 
+        /* Date Range Picker */
+        .date-range-picker {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .date-range-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .date-range-title i {
+            color: #e8a020;
+        }
+
+        .date-inputs {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .date-field {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .date-field label {
+            display: block;
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        .date-field input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .date-field input:focus {
+            outline: none;
+            border-color: #e8a020;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .date-field input::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.5;
+            cursor: pointer;
+        }
+
+        .btn-apply-date {
+            background: #e8a020;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            height: 42px;
+        }
+
+        .btn-apply-date:hover {
+            background: #d48c0c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(232,160,32,0.3);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .preset-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 6px 15px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .preset-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: #e8a020;
+        }
+
+        .preset-btn.active {
+            background: #e8a020;
+            border-color: #e8a020;
+        }
+
         /* Stats Grid */
         .stats-grid {
             display: grid;
@@ -184,6 +301,15 @@
         .date-info i {
             color: #1e5799;
             margin-right: 8px;
+        }
+
+        .date-range-badge {
+            background: #e8a02020;
+            color: #b45b0f;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
         }
 
         /* Section */
@@ -369,7 +495,7 @@
                 background: white;
                 padding: 0;
             }
-            .toolbar {
+            .toolbar, .date-range-picker {
                 display: none;
             }
             .paper {
@@ -377,10 +503,6 @@
                 border-radius: 0;
             }
             .header-gradient {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-            .stat-card {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -400,12 +522,15 @@
                 margin-bottom: 20px;
                 flex-wrap: wrap;
             }
-            .appointment-item {
+            .date-inputs {
                 flex-direction: column;
-                gap: 8px;
             }
-            .appointment-time {
-                align-self: flex-start;
+            .date-field {
+                width: 100%;
+            }
+            .btn-apply-date {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -438,10 +563,42 @@
             </div>
         </div>
 
-        <div class="report-title">📊 รายงานประจำแผนก</div>
+        <div class="report-title">📊 รายงานสรุปแผนก</div>
         
         <div class="dept-tag">
             <span id="deptNameDisplay">กำลังโหลด...</span>
+        </div>
+
+        <!-- Date Range Picker -->
+        <div class="date-range-picker no-print">
+            <div class="date-range-title">
+                <i class="fas fa-calendar-alt"></i>
+                <span>เลือกช่วงเวลาที่ต้องการดูรายงาน</span>
+            </div>
+            
+            <div class="date-inputs">
+                <div class="date-field">
+                    <label>📅 วันที่เริ่มต้น</label>
+                    <input type="date" id="startDateInput">
+                </div>
+                <div class="date-field">
+                    <label>📅 วันที่สิ้นสุด</label>
+                    <input type="date" id="endDateInput">
+                </div>
+                <button class="btn-apply-date" onclick="applyDateRange()">
+                    <i class="fas fa-check"></i> แสดงรายงาน
+                </button>
+            </div>
+
+            <!-- Preset Buttons -->
+            <div class="preset-buttons">
+                <button class="preset-btn" onclick="setDatePreset('today')">วันนี้</button>
+                <button class="preset-btn" onclick="setDatePreset('yesterday')">เมื่อวาน</button>
+                <button class="preset-btn" onclick="setDatePreset('week')">7 วันล่าสุด</button>
+                <button class="preset-btn" onclick="setDatePreset('month')">30 วันล่าสุด</button>
+                <button class="preset-btn" onclick="setDatePreset('thisMonth')">เดือนนี้</button>
+                <button class="preset-btn" onclick="setDatePreset('lastMonth')">เดือนที่แล้ว</button>
+            </div>
         </div>
 
         <!-- Stats Cards -->
@@ -449,7 +606,7 @@
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-comments"></i></div>
                 <div class="stat-number" id="statMessages">0</div>
-                <div class="stat-label">ข้อความวันนี้</div>
+                <div class="stat-label">ข้อความทั้งหมด</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><i class="fas fa-users"></i></div>
@@ -507,8 +664,11 @@ function formatThaiDate(date = new Date()) {
     });
 }
 
-function formatThaiTime(date = new Date()) {
-    return date.toLocaleTimeString('th-TH', {
+function formatThaiDateTime(date = new Date()) {
+    return date.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         timeZone: 'Asia/Bangkok'
@@ -520,6 +680,83 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================
+// Date Range Functions
+// ============================================
+let currentStartDate = null;
+let currentEndDate = null;
+
+function setDatePreset(preset) {
+    const today = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
+
+    switch(preset) {
+        case 'today':
+            startDate = new Date();
+            endDate = new Date();
+            break;
+        case 'yesterday':
+            startDate = new Date();
+            startDate.setDate(today.getDate() - 1);
+            endDate = new Date(startDate);
+            break;
+        case 'week':
+            startDate.setDate(today.getDate() - 7);
+            endDate = new Date();
+            break;
+        case 'month':
+            startDate.setMonth(today.getMonth() - 1);
+            endDate = new Date();
+            break;
+        case 'thisMonth':
+            startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            break;
+        case 'lastMonth':
+            startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+    }
+
+    // Format YYYY-MM-DD
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    document.getElementById('startDateInput').value = formatDate(startDate);
+    document.getElementById('endDateInput').value = formatDate(endDate);
+    
+    // Highlight active preset
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Apply date range
+    applyDateRange();
+}
+
+function applyDateRange() {
+    const startDate = document.getElementById('startDateInput').value;
+    const endDate = document.getElementById('endDateInput').value;
+    
+    if (!startDate || !endDate) {
+        alert('กรุณาเลือกวันที่เริ่มต้นและสิ้นสุด');
+        return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+        alert('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด');
+        return;
+    }
+    
+    currentStartDate = startDate;
+    currentEndDate = endDate;
+    loadReport();
 }
 
 // ============================================
@@ -566,7 +803,6 @@ function parseDepartmentSummary(summaryText) {
                 result.tasks = lines.map(line => {
                     const cleanLine = line.replace(/^[•\-\*]\s*/, '').replace(/\*\*/g, '').trim();
                     
-                    // Try to extract owner and task
                     const ownerMatch = cleanLine.match(/^([^:：]+)[：:]\s*(.+)/) ||
                                      cleanLine.match(/^(.+?)\s+(?:ต้อง|จะ|ช่วย)\s+(.+)/);
                     
@@ -594,29 +830,29 @@ function parseDepartmentSummary(summaryText) {
 // ============================================
 // Render Report
 // ============================================
-function renderReport(parsed, stats, deptName) {
+function renderReport(parsed, stats, deptName, dateRangeText) {
     const contentArea = document.getElementById('contentArea');
     const now = new Date();
-    const thaiDate = formatThaiDate(now);
-    const thaiTime = formatThaiTime(now);
 
     // Update stats
     document.getElementById('statMessages').textContent = stats.messageCount || 0;
     document.getElementById('statParticipants').textContent = stats.participantCount || 0;
     document.getElementById('statAppointments').textContent = parsed.appointments.length;
     document.getElementById('statTasks').textContent = parsed.tasks.length;
-    document.getElementById('footerTimestamp').textContent = `สร้างเมื่อ ${thaiDate} เวลา ${thaiTime} น.`;
+    document.getElementById('footerTimestamp').textContent = `สร้างรายงานเมื่อ ${formatThaiDateTime(now)} น.`;
 
     let html = `
         <!-- Date Info -->
         <div class="date-info">
             <div>
                 <i class="fas fa-calendar-alt"></i>
-                รายงานประจำวันที่ <strong>${thaiDate}</strong>
+                <span class="date-range-badge">
+                    <i class="fas fa-clock"></i> ${dateRangeText}
+                </span>
             </div>
             <div>
-                <i class="fas fa-clock"></i>
-                เวลาที่สร้าง: ${thaiTime} น.
+                <i class="fas fa-file-alt"></i>
+                ข้อความทั้งหมด ${stats.messageCount} ข้อความ
             </div>
         </div>
 
@@ -626,7 +862,7 @@ function renderReport(parsed, stats, deptName) {
                 <div class="section-icon icon-blue">
                     <i class="fas fa-comment-dots"></i>
                 </div>
-                <h2>💬 วันนี้แผนกคุยเรื่องอะไร</h2>
+                <h2>💬 สรุปใจความสำคัญ</h2>
             </div>
             <div class="topic-card">
                 ${escapeHtml(parsed.topic)}
@@ -641,14 +877,13 @@ function renderReport(parsed, stats, deptName) {
                 <div class="section-icon icon-orange">
                     <i class="fas fa-calendar-alt"></i>
                 </div>
-                <h2>📅 นัดหมายสำคัญ</h2>
+                <h2>📅 นัดหมาย</h2>
             </div>
     `;
 
     if (parsed.appointments.length > 0) {
         html += '<div class="appointment-list">';
         parsed.appointments.forEach(appt => {
-            // Try to extract time from appointment text
             const timeMatch = appt.match(/(\d{1,2}[.:]\d{2}|\d{1,2}\s*น\.|\d{1,2}\s*โมง|เช้า|บ่าย|เย็น|ค่ำ)/i);
             const timeStr = timeMatch ? timeMatch[0] : 'ไม่ระบุเวลา';
             
@@ -668,7 +903,7 @@ function renderReport(parsed, stats, deptName) {
         html += `
             <div class="empty-state">
                 <i class="fas fa-calendar-times"></i>
-                <p>ไม่มีการนัดหมายในวันนี้</p>
+                <p>ไม่มีนัดหมายในช่วงเวลาที่เลือก</p>
             </div>
         `;
     }
@@ -718,7 +953,7 @@ function renderReport(parsed, stats, deptName) {
         html += `
             <div class="empty-state">
                 <i class="fas fa-check-circle"></i>
-                <p>ไม่มีงานค้างที่ต้องดำเนินการ</p>
+                <p>ไม่มีงานค้างในช่วงเวลาที่เลือก</p>
             </div>
         `;
     }
@@ -753,7 +988,6 @@ async function loadReport() {
         const deptId = user.department_id;
         const deptName = user.department_name || 'ไม่ระบุแผนก';
 
-        // Update department name display
         document.getElementById('deptNameDisplay').textContent = deptName;
         document.title = `รายงานแผนก ${deptName} - โรงพยาบาลเซนต์เมรี่`;
 
@@ -771,19 +1005,40 @@ async function loadReport() {
             throw new Error('ไม่พบห้องสนทนาของแผนก');
         }
 
-        // Get today's messages for stats
-        const today = new Date().toISOString().split('T')[0];
-        const messagesRes = await fetch(`/api/chat-rooms/${deptRoom.room_id}/messages?limit=200`, {
+        // Set default dates if not set
+        if (!currentStartDate || !currentEndDate) {
+            const today = new Date();
+            currentStartDate = today.toISOString().split('T')[0];
+            currentEndDate = today.toISOString().split('T')[0];
+            
+            document.getElementById('startDateInput').value = currentStartDate;
+            document.getElementById('endDateInput').value = currentEndDate;
+        }
+
+        // Format date range for display
+        const startDisplay = new Date(currentStartDate).toLocaleDateString('th-TH');
+        const endDisplay = new Date(currentEndDate).toLocaleDateString('th-TH');
+        const dateRangeText = currentStartDate === currentEndDate 
+            ? `วันที่ ${startDisplay}`
+            : `ระหว่าง ${startDisplay} - ${endDisplay}`;
+
+        // Get messages for stats
+        const messagesRes = await fetch(`/api/chat-rooms/${deptRoom.room_id}/messages?limit=500`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         const messagesData = await messagesRes.json();
-        const todayMessages = (messagesData.messages || []).filter(msg => {
-            const msgDate = new Date(msg.created_at).toISOString().split('T')[0];
-            return msgDate === today;
+        
+        // Filter messages by date range
+        const startDateTime = new Date(currentStartDate).setHours(0,0,0,0);
+        const endDateTime = new Date(currentEndDate).setHours(23,59,59,999);
+        
+        const filteredMessages = (messagesData.messages || []).filter(msg => {
+            const msgDate = new Date(msg.created_at).getTime();
+            return msgDate >= startDateTime && msgDate <= endDateTime;
         });
 
-        const uniqueParticipants = new Set(todayMessages.map(m => m.sender_id)).size;
+        const uniqueParticipants = new Set(filteredMessages.map(m => m.sender_id)).size;
 
         // Get AI Summary
         const summaryRes = await fetch('/api/chat-summary', {
@@ -794,21 +1049,21 @@ async function loadReport() {
             },
             body: JSON.stringify({
                 room_id: deptRoom.room_id,
-                message_count: 100,
-                start_date: today,
-                end_date: today
+                message_count: 500,
+                start_date: currentStartDate,
+                end_date: currentEndDate
             })
         });
 
         const summaryData = await summaryRes.json();
 
         if (!summaryData.success) {
-            // No messages today
             if (summaryData.error?.includes('ไม่มีข้อความ')) {
                 renderReport(
-                    { topic: 'ยังไม่มีการสนทนาในวันนี้', appointments: [], tasks: [] },
-                    { messageCount: 0, participantCount: 0 },
-                    deptName
+                    { topic: `ไม่มีข้อความในช่วง${dateRangeText}`, appointments: [], tasks: [] },
+                    { messageCount: filteredMessages.length, participantCount: uniqueParticipants },
+                    deptName,
+                    dateRangeText
                 );
                 return;
             }
@@ -818,21 +1073,18 @@ async function loadReport() {
         // Parse and render
         const parsed = parseDepartmentSummary(summaryData.summary);
         
-        // If no appointments/tasks found in parsed data, try to extract from messages
+        // If no appointments/tasks found, try to extract from messages
         if (parsed.appointments.length === 0 && parsed.tasks.length === 0) {
-            // Look for keywords in messages
             const appointmentKeywords = ['นัด', 'ประชุม', 'พบ', 'เจอ', 'meeting'];
             const taskKeywords = ['ต้อง', 'ช่วย', 'รับผิดชอบ', 'ดำเนินการ', 'ทำ', 'ส่ง', 'แจ้ง'];
             
-            todayMessages.forEach(msg => {
+            filteredMessages.forEach(msg => {
                 const text = msg.message_text || '';
                 
-                // Check for appointments
                 if (appointmentKeywords.some(k => text.includes(k))) {
                     parsed.appointments.push(`[${msg.full_name}] ${text.substring(0, 100)}`);
                 }
                 
-                // Check for tasks
                 if (taskKeywords.some(k => text.includes(k))) {
                     parsed.tasks.push({
                         owner: msg.full_name,
@@ -843,9 +1095,9 @@ async function loadReport() {
         }
 
         renderReport(parsed, {
-            messageCount: todayMessages.length,
+            messageCount: filteredMessages.length,
             participantCount: uniqueParticipants
-        }, deptName);
+        }, deptName, dateRangeText);
 
     } catch (error) {
         console.error('Report error:', error);
@@ -882,7 +1134,9 @@ function downloadPDF() {
     btn.disabled = true;
 
     const deptName = document.getElementById('deptNameDisplay').textContent;
-    const dateStr = formatThaiDate().replace(/[ /]/g, '_');
+    const startDate = document.getElementById('startDateInput').value;
+    const endDate = document.getElementById('endDateInput').value;
+    const dateStr = startDate === endDate ? startDate : `${startDate}_to_${endDate}`;
     
     html2pdf()
         .set({
@@ -917,20 +1171,14 @@ function downloadPDF() {
 // ============================================
 // Initialize
 // ============================================
-document.addEventListener('DOMContentLoaded', loadReport);
-
-// Auto-refresh every 5 minutes if tab is visible
-let refreshInterval = setInterval(() => {
-    if (!document.hidden) {
-        loadReport();
-    }
-}, 5 * 60 * 1000);
-
-// Clean up interval on page unload
-window.addEventListener('beforeunload', () => {
-    if (refreshInterval) {
-        clearInterval(refreshInterval);
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    // Set default dates to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('startDateInput').value = today;
+    document.getElementById('endDateInput').value = today;
+    
+    // Load report
+    loadReport();
 });
 </script>
 </body>

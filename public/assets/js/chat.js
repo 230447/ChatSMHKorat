@@ -4700,9 +4700,7 @@ showSummaryResult(data) {
                     <i class="fas fa-save"></i> บันทึก
                 </button>
                 
-                <button id="openReportBtn" style="padding: 10px 20px; background: #9b59b6; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    <i class="fas fa-file-alt"></i> ดูรายงาน
-                </button>
+                
             </div>
         </div>
     `;
