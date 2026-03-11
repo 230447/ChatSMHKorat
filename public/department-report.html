@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        /* ===== ปรับสำหรับการพิมพ์ A4 ===== */
+    
         @page {
             size: A4;
             margin: 1.5cm 1.5cm 1.5cm 1.5cm;
@@ -28,7 +28,7 @@
             padding: 24px 16px 40px;
         }
 
-        /* Toolbar - ไม่แสดงเวลาพิมพ์ */
+  
         .toolbar {
             position: fixed;
             top: 20px;
@@ -63,7 +63,7 @@
         .btn-print { background: #1e5799; color: white; }
         .btn-pdf { background: #27ae60; color: white; }
 
-        /* Main Paper - ปรับสเกลให้พอดี A4 */
+      
         .paper {
             max-width: 1000px;
             margin: 0 auto;
@@ -71,7 +71,7 @@
             border-radius: 20px;
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
             overflow: hidden;
-            /* เผื่อขอบเวลาพิมพ์ */
+          
             page-break-after: avoid;
             page-break-inside: avoid;
         }
@@ -82,7 +82,6 @@
             padding: 40px 40px 30px;
             position: relative;
             color: white;
-            /* สำหรับการพิมพ์ */
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -141,7 +140,7 @@
             color: #fff3d6;
         }
 
-        /* Date Range Picker - ไม่แสดงเวลาพิมพ์ */
+       
         .date-range-picker {
             background: rgba(255,255,255,0.1);
             border-radius: 15px;
@@ -413,21 +412,19 @@
             font-size: 15px;
         }
 
-        /* Tasks Table - ปรับให้แสดงใน A4 */
+      
         .tasks-table {
             width: 100%;
             border-collapse: collapse;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            /* ป้องกันตารางถูกตัด */
             page-break-inside: avoid;
         }
 
         .tasks-table thead {
             background: #1a3a5c;
             color: white;
-            /* ให้หัวตารางแสดงซ้ำทุกหน้าถ้าตารางยาว */
             display: table-header-group;
         }
 
@@ -488,7 +485,6 @@
             justify-content: space-between;
             font-size: 13px;
             color: #718096;
-            /* ให้ footer อยู่ท้ายหน้าเสมอ */
             page-break-after: avoid;
         }
 
@@ -560,7 +556,7 @@
                 print-color-adjust: exact;
             }
             
-            /* ปรับขนาดตัวอักษรให้พอดี A4 */
+          
             body, .paper, .content-area {
                 font-size: 12pt;
             }
@@ -573,7 +569,7 @@
                 font-size: 28pt;
             }
             
-            /* กันไม่ให้ section ถูกตัดกลาง */
+         
             .section, .appointment-item, .tasks-table tr {
                 page-break-inside: avoid;
             }
@@ -863,7 +859,7 @@ function parseDepartmentSummary(summaryText) {
             }
         }
 
-        // Extract Tasks (✅ section) - ดึงทั้งหมด
+        // Extract Tasks ( section) - ดึงทั้งหมด
         const taskMatch = summaryText.match(/✅[^:：\n]*[:：]\s*([\s\S]*?)(?=---|$)/);
         if (taskMatch) {
             const taskText = taskMatch[1].trim();
@@ -1211,7 +1207,7 @@ function downloadPDF() {
     
     // ตั้งค่าสำหรับ A4
     const opt = {
-        margin:        [0.5, 0.5, 0.5, 0.5], // บน, ขวา, ล่าง, ซ้าย (หน่วยเป็นนิ้ว)
+        margin:        [0.5, 0.5, 0.5, 0.5], 
         filename:      `รายงานแผนก_${deptName}_${dateStr}.pdf`,
         image:         { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
@@ -1222,10 +1218,10 @@ function downloadPDF() {
         },
         jsPDF:        { 
             unit: 'in', 
-            format: 'a4',      // กำหนดขนาด A4
-            orientation: 'portrait' // แนวตั้ง
+            format: 'a4',     
+            orientation: 'portrait' 
         },
-        pagebreak: { mode: ['css', 'legacy'] } // ให้ตัดหน้าตาม CSS
+        pagebreak: { mode: ['css', 'legacy'] } 
     };
     
     html2pdf()
@@ -1248,7 +1244,7 @@ function downloadPDF() {
 // Initialize
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Set default dates to today
+ 
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('startDateInput').value = today;
     document.getElementById('endDateInput').value = today;

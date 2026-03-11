@@ -9,11 +9,10 @@ class ChatSummaryAI {
     }
 
     /**
-     * เรียก API /api/chat-summary เพื่อสรุปข้อความ
      * @param {Object} options - { room_id, message_count, start_date, end_date, custom_instruction }
      */
     async summarize(options) {
-        // ป้องกันการเรียกซ้ำ
+        
         if (this.isSummarizing) {
             return { 
                 success: false, 
@@ -21,7 +20,6 @@ class ChatSummaryAI {
                 isProcessing: true 
             };
         }
-
         // ตรวจสอบ options
         if (!options || !options.room_id) {
             return { 
@@ -56,8 +54,6 @@ class ChatSummaryAI {
             });
 
             const data = await response.json();
-
-            // กรณี Rate Limit (429)
             if (response.status === 429) {
                 return {
                     success: false,
@@ -65,8 +61,6 @@ class ChatSummaryAI {
                     rateLimited: true
                 };
             }
-
-            // กรณี error อื่นๆ
             if (!response.ok) {
                 throw new Error(data.error || `เกิดข้อผิดพลาด (${response.status})`);
             }
@@ -76,8 +70,6 @@ class ChatSummaryAI {
             }
 
             console.log('✅ Summary received from server');
-
-            // ส่งข้อมูลตรงจาก API กลับไป
             return {
                 success: true,
                 summary: data.summary,
@@ -100,22 +92,13 @@ class ChatSummaryAI {
             this.isSummarizing = false;
         }
     }
-
-    /**
-     * ตรวจสอบสถานะการสรุป
-     */
     isActive() {
         return this.isSummarizing;
     }
 
-    /**
-     * ยกเลิกการสรุป (ถ้ามี)
-     */
     cancel() {
         this.isSummarizing = false;
         console.log('🛑 Summary cancelled');
     }
 }
-
-// Export
 window.ChatSummaryAI = ChatSummaryAI;

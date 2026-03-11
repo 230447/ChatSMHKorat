@@ -971,7 +971,7 @@ function validateForm() {
     
     return isValid;
 }
-        // ✅ เพิ่ม event listeners สำหรับ real-time validation
+        //  event listeners สำหรับ real-time validation
 document.getElementById('employee_id').addEventListener('input', function() {
     clearFieldError('employeeIdError');
 });
@@ -1032,7 +1032,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
         } else {
             document.getElementById('loadingOverlay').style.display = 'none';
             
-            // ✅ ตรวจสอบประเภท error และแสดงที่ฟิลด์ที่ถูกต้อง
+            // ตรวจสอบประเภท error และแสดงที่ฟิลด์ที่ถูกต้อง
             const errorMsg = data.error || 'เกิดข้อผิดพลาดในการลงทะเบียน';
             
             if (errorMsg.includes('รหัสพนักงาน') || errorMsg.includes('employee_id')) {

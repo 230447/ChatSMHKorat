@@ -431,7 +431,7 @@
 function populateProfileForm(user) {
     console.log('👤 เติมข้อมูลผู้ใช้:', user);
     
-    // ✅ ตรวจสอบและใช้รูปจาก localStorage ก่อน
+    // ตรวจสอบและใช้รูปจาก localStorage ก่อน
     const storedUser = localStorage.getItem('user');
     let profileImage = user.profile_image;
     
@@ -464,7 +464,7 @@ function populateProfileForm(user) {
     document.getElementById('userFullName').textContent = user.full_name || 'ผู้ใช้ไม่ระบุชื่อ';
     document.getElementById('userDepartment').textContent = `แผนก: ${user.department_name || 'ไม่ระบุ'}`;
     
-    // ✅ บันทึกข้อมูลเดิมไว้ตรวจสอบการเปลี่ยนแปลง
+    // บันทึกข้อมูลเดิมไว้ตรวจสอบการเปลี่ยนแปลง
     originalData = {
         full_name: user.full_name || '',
         email: user.email || '',
@@ -584,7 +584,7 @@ async function saveProfile() {
         const data = await response.json();
         
         if (response.ok && data.success) {
-            // ✅ อัพเดท localStorage ด้วยข้อมูลใหม่ทั้งหมด
+            //  อัพเดท localStorage ด้วยข้อมูลใหม่ทั้งหมด
             const updatedUser = {
                 user_id: currentUser.user_id,
                 employee_id: currentUser.employee_id,
@@ -598,7 +598,7 @@ async function saveProfile() {
             
             localStorage.setItem('user', JSON.stringify(updatedUser));
             
-            // ✅ อัพเดท currentUser และ originalData
+            //  อัพเดท currentUser และ originalData
             currentUser = updatedUser;
             originalData = {
                 full_name: updatedUser.full_name,
@@ -606,7 +606,6 @@ async function saveProfile() {
                 profile_image: updatedUser.profile_image
             };
             
-            // ✅ ส่ง event ไปยังหน้าอื่นๆ (ถ้ามี)
             window.dispatchEvent(new CustomEvent('userUpdated', { detail: updatedUser }));
             
             showToast('บันทึกโปรไฟล์สำเร็จ', 'success');

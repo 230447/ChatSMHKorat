@@ -13,7 +13,7 @@ require('dotenv').config();
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// ✅ ใช้ Resend แทน nodemailer (Render Free บล็อก SMTP ทุก port)
+
 const { Resend } = require('resend');
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -64,7 +64,7 @@ const getConnection = async (retries = 3) => {
 };
 
 // ========================================
-// ✅ ฟังก์ชันส่งอีเมลผ่าน Resend API (ทำงานได้บน Render Free)
+// ฟังก์ชันส่งอีเมลผ่าน Resend API (ทำงานได้บน Render Free)
 // ========================================
 async function sendResetCodeEmail(email, name, code) {
     console.log('📧 ===== SENDING VIA RESEND API =====');
@@ -73,8 +73,7 @@ async function sendResetCodeEmail(email, name, code) {
 
     try {
         const { data, error } = await resend.emails.send({
-            // ⚠️ หมายเหตุ: onboarding@resend.dev ส่งได้เฉพาะ verified email เท่านั้น
-            // เมื่อ verify domain แล้ว เปลี่ยนเป็น: 'noreply@your-domain.com'
+        
             from: 'SMH Chat <onboarding@resend.dev>',
             to: email,
             subject: '🔐 รหัสยืนยันการตั้งรหัสผ่านใหม่',
@@ -780,25 +779,25 @@ class SmartSummaryEngine {
     generateSummary(messages, roomName, timeframe, participants, customInstruction = '') {
         console.log('🤖 Using Smart Summary Engine (AI-grade)');
 
-        // 1. Deep Analysis
+        //  Deep Analysis
         const analysis = this.deepAnalyze(messages);
         
-        // 2. Extract Entities
+        // Extract Entities
         const entities = this.extractEntities(messages);
         
-        // 3. Build Timeline
+        //  Build Timeline
         const timeline = this.buildTimeline(messages);
         
-        // 4. Identify Action Items
+        //  Identify Action Items
         const actionItems = this.identifyActionItems(messages);
         
-        // 5. Find Decisions
+        //  Find Decisions
         const decisions = this.findDecisions(messages);
         
-        // 6. Detect Topics
+        //  Detect Topics
         const topics = this.detectTopics(messages);
         
-        // 7. Create Summary
+        //  Create Summary
         return this.formatSummary({
             roomName,
             timeframe,
@@ -952,7 +951,7 @@ formatSummary(data) {
     const appointmentPattern = /นัด|ประชุม|พบ|เจอ|\d{1,2}[\/\-]\d{1,2}|\d{1,2}:\d{2}|โมง|บ่าย|เช้า|พรุ่งนี้|วันนี้/i;
     const actionPattern = /ต้อง|ช่วย|รับผิดชอบ|ดำเนินการ|ส่ง|เตรียม|แจ้ง|ติดต่อ|ตรวจ/;
 
-    // ค้นหาจาก messages โดยตรง (เข้าถึงผ่าน timeline ที่มีอยู่)
+    
     const apptItems = data.timeline.filter(t => t.message && appointmentPattern.test(t.message));
     const actionItems = data.actionItems.length > 0 ? data.actionItems : 
         data.timeline.filter(t => t.message && actionPattern.test(t.message));
@@ -1036,10 +1035,10 @@ app.post('/api/chat-summary', authenticateToken, async (req, res) => {
         // รายชื่อผู้เข้าร่วมทั้งหมด
         const participants = [...new Set(sortedMessages.map(msg => msg.full_name))];
 
-        // ✅ กำหนดค่า timeframe
+        //  กำหนดค่า timeframe
         const timeframe = actualTimeframe;
 
-        // ✅ ตรวจสอบ API key และใช้ model ที่ถูกต้อง
+        //  ตรวจสอบ API key และใช้ model ที่ถูกต้อง
         let summary;
         const apiKey = process.env.GEMINI_API_KEY;
         
@@ -1321,7 +1320,7 @@ function checkRateLimit(userId) {
     // ลบรายการที่เกิน 1 ชั่วโมง
     const recentLimits = userLimits.filter(time => now - time < 60 * 60 * 1000);
     
-    if (recentLimits.length >= 10) { // จำกัด 10 ครั้งต่อชั่วโมง
+    if (recentLimits.length >= 10) { 
         return false;
     }
     

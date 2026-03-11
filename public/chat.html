@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/responsive.css">
     <style>
-        /* เพิ่มสไตล์สำหรับแยกประเภทห้อง */
+        
         .room-category {
             padding: 10px 15px;
             font-size: 12px;
@@ -616,7 +616,7 @@
     .summary-actions {
         flex-direction: column;
     }
-    /* ป้องกันการกระโดดของ scroll และปรับปรุงประสิทธิภาพ */
+    
 #messagesList {
     scroll-behavior: smooth;
     overflow-anchor: none;
@@ -630,19 +630,19 @@
     transform: translateZ(0);
 }
 
-/* ปรับปรุงการแสดงผลข้อความ */
+
 .message-content {
     display: flex;
     flex-direction: column;
     min-height: auto;
 }
 
-/* ป้องกันการขยับของ input area */
+
 .message-input-area {
     flex-shrink: 0;
 }
 
-/* ใส่ transition สำหรับการเพิ่มข้อความใหม่ */
+
 @keyframes messageAppear {
     from {
         opacity: 0;
@@ -658,18 +658,18 @@
     animation: messageAppear 0.3s ease-out;
 }
 
-/* ปรับปรุงการ scroll */
+
 .messages-container {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
 }
 
-/* ป้องกันการขยับของ layout */
+
 .chat-header {
     flex-shrink: 0;
 }
 
-/* Optimistic UI สำหรับข้อความที่กำลังส่ง */
+
 .temp-message {
     opacity: 0.8;
     position: relative;
@@ -686,13 +686,13 @@
     border-radius: 10px;
 }
 
-/* ปรับปรุงการแสดงผล avatar */
+
 .message-avatar {
     flex-shrink: 0;
     width: 36px;
     height: 36px;
 }
-/* ข้อความที่เราส่ง (ขวา) - ไม่มีรูป */
+
 .message.sent {
     margin-left: auto;
     margin-right: 16px;
@@ -710,7 +710,7 @@
     border-bottom-left-radius: 16px;
 }
 
-/* ข้อความคนอื่น (ซ้าย) - มีรูป */
+
 .message.received {
     margin-left: 16px;
     margin-right: auto;
@@ -735,7 +735,7 @@
     border-top-right-radius: 16px;
     border-bottom-right-radius: 16px;
 }
-/* ===== ปุ่มใน Modal AI Summary (ปิด, คัดลอก, บันทึก, ดูรายงาน) ===== */
+
 #aiSummaryModal .summary-actions {
     display: flex;
     gap: 12px;
@@ -749,7 +749,7 @@
 #aiSummaryModal .summary-actions button {
     padding: 12px 24px;
     border: none;
-    border-radius: 50px;  /* ให้เป็นทรงกลมมากขึ้น */
+    border-radius: 50px;  
     font-size: 14px;
     font-weight: 600;
     font-family: 'Prompt', sans-serif;
@@ -1351,9 +1351,9 @@ button {
         try {
             window.chatApp = new EnhancedChatApp();
             
-            // ✅ FIX 1: แก้ไขให้ปุ่ม AI Summary ทำงาน
+           
             setTimeout(() => {
-                // เพิ่ม event listener ให้ปุ่ม AI Summary
+                
                 const aiSummaryBtn = document.getElementById('aiSummaryBtn');
                 if (aiSummaryBtn) {
                     console.log('✅ Found AI Summary button, adding event listener');
@@ -1366,23 +1366,23 @@ button {
                     };
                 }
                 
-                // ✅ FIX 2: แก้ไขฟังก์ชัน showAISummary ให้ใช้งานได้ทันที
+               
                 if (window.chatApp) {
-                    // ถ้า showAISummary ไม่มี ให้สร้างฟังก์ชันใหม่
+                   
                     if (!window.chatApp.showAISummary) {
                         window.chatApp.showAISummary = function() {
                             this.showMockAISummary();
                         };
                     }
                     
-                    // เพิ่มฟังก์ชัน mock สำหรับทดสอบ
+                   
                     window.chatApp.showMockAISummary = function() {
                         if (!this.currentRoom) {
                             this.showNotification('แจ้งเตือน', 'กรุณาเลือกห้องสนทนาก่อน', 'info');
                             return;
                         }
                         
-                        // สร้างสรุปตัวอย่าง (สำหรับการทดสอบ)
+                        
                         const mockSummary = `# สรุปการสนทนา - ${this.currentRoom.room_name}
 
 **วันที่:** ${new Date().toLocaleDateString('th-TH')}
@@ -1416,17 +1416,17 @@ button {
                         this.createAndShowSummaryModal(mockSummary);
                     };
                     
-                    // ✅ เพิ่มฟังก์ชันแสดง modal (แก้ไขแล้ว)
+                  
                     window.chatApp.createAndShowSummaryModal = function(summaryText) {
-                        // ลบ modal เก่าถ้ามี
+                      
                         const oldModal = document.getElementById('aiSummaryModal');
                         if (oldModal) oldModal.remove();
                         
-                        // เก็บ reference ไว้ใช้ใน event listeners
+                       
                         const app = window.chatApp;
                         const currentRoom = this.currentRoom;
                         
-                        // สร้าง modal ใหม่
+                        
                         const modal = document.createElement('div');
                         modal.className = 'modal active';
                         modal.id = 'aiSummaryModal';
@@ -1488,7 +1488,7 @@ button {
                         
                         document.body.appendChild(modal);
                         
-                        // เพิ่ม event listeners
+                       
                         modal.querySelectorAll('.close-modal').forEach(btn => {
                             btn.addEventListener('click', () => {
                                 modal.remove();
@@ -1520,7 +1520,7 @@ button {
                             alert('บันทึกสรุปแล้ว (สำหรับการทดสอบ)');
                         });
                         
-                        // ✅ ปุ่มเปิดรายงาน - แก้ไขแล้ว
+                        // ปุ่มเปิดรายงาน 
                         document.getElementById('openReportBtn').addEventListener('click', () => {
                             if (app && app.openReportPage) {
                                 app.openReportPage(summaryText, currentRoom);
@@ -1530,7 +1530,7 @@ button {
                         });
                     };
                     
-                    // ✅ เพิ่มฟังก์ชันเปิดหน้ารายงาน (ตรงนี้)
+                    // ฟังก์ชันเปิดหน้ารายงาน 
                     window.chatApp.openReportPage = function(summaryText, roomData) {
                         try {
                             const room = roomData || this.currentRoom;
@@ -1551,8 +1551,8 @@ button {
                         }
                     };
                     
-                } // ปิด if (window.chatApp)
-            }, 1000); // รอ 1 วินาทีให้ระบบโหลดเสร็จ
+                } 
+            }, 1000); 
             
         } catch (error) {
             console.error('❌ เริ่มต้นแอปพลิเคชันผิดพลาด:', error);
@@ -1579,9 +1579,7 @@ button {
         }
     }); // ปิด document.addEventListener
 
-    // ฟังก์ชันอื่นๆ (อยู่นอก document.addEventListener)
     
-    // เพิ่มฟังก์ชันสำหรับเปิด/ปิด sidebar บนมือถือ
     function toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.getElementById('mobileOverlay');
@@ -1592,7 +1590,7 @@ button {
         }
     }
     
-    // ✅ วิธีแก้ไขง่ายสุด: ใช้ MutationObserver ติดตามการเปลี่ยนชื่อห้อง
+    
     setTimeout(() => {
         const currentRoomName = document.getElementById('currentRoomName');
         
@@ -1628,7 +1626,7 @@ button {
         }
     }, 1500);
     
-    // ✅ เพิ่มฟังก์ชันจัดการ scroll อย่างชาญฉลาด
+    // ฟังก์ชันจัดการ scroll อย่างชาญฉลาด
     function setupSmartScroll() {
         const messagesList = document.getElementById('messagesList');
         if (!messagesList) return;
@@ -1659,12 +1657,12 @@ button {
         });
     }
 
-    // ✅ ฟังก์ชัน scroll ไปด้านล่าง
+    //  ฟังก์ชัน scroll ไปด้านล่าง
     function scrollToBottom(element) {
         element.scrollTop = element.scrollHeight;
     }
 
-    // ✅ ฟังก์ชันเพิ่มข้อความแบบไม่ทำให้ layout shift
+    // ฟังก์ชันเพิ่มข้อความแบบไม่ทำให้ layout shift
     function addMessageOptimistic(messageData) {
         const messagesList = document.getElementById('messagesList');
         if (!messagesList) return null;
@@ -1693,7 +1691,7 @@ button {
         return tempId;
     }
 
-    // ✅ แก้ไข event listener สำหรับการส่งข้อความ
+    //  event listener สำหรับการส่งข้อความ
     document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             setupSmartScroll();

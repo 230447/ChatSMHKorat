@@ -1,12 +1,3 @@
-/* ========================================
-   SMH Hospital Chat - Responsive Fixes
-   ใส่ไฟล์นี้ต่อท้าย CSS ทุกไฟล์ หรือ link แยกก็ได้
-   ======================================== */
-
-/* ========================================
-   GLOBAL - ใช้กับทุกหน้า
-   ======================================== */
-
 /* Safe area สำหรับ iPhone notch */
 :root {
     --safe-top: env(safe-area-inset-top, 0px);
@@ -15,21 +6,18 @@
     --safe-right: env(safe-area-inset-right, 0px);
 }
 
-/* Touch targets ต้องไม่เล็กกว่า 44px */
 button, .btn, a.btn, input[type="submit"],
 .tab-btn, .btn-icon, .btn-send {
     min-height: 44px;
     min-width: 44px;
 }
 
-/* ✅ เพิ่มส่วนนี้ต่อท้าย */
 .btn-secondary, .btn-primary, .close-modal {
     min-width: fit-content !important;
     white-space: nowrap !important;
     word-break: normal !important;
 }
 
-/* ป้องกัน text overflow บน mobile */
 * {
     word-break: break-word;
 }
@@ -43,8 +31,6 @@ html {
 /* ========================================
    LANDING PAGE (index.html / style.css)
    ======================================== */
-
-/* Hamburger Button - ซ่อนบน desktop */
 .hamburger-btn {
     display: none;
     background: none;
@@ -73,13 +59,11 @@ html {
         font-size: 0.95rem !important;
     }
 
-    /* Hamburger แสดงบน mobile */
     .hamburger-btn {
         display: flex;
         z-index: 1001;
     }
 
-    /* Nav - ซ่อนก่อน เปิดด้วย hamburger */
     nav {
         display: none;
         position: fixed;
@@ -112,7 +96,6 @@ html {
         padding: 12px 24px !important;
     }
 
-    /* ปุ่มปิด nav */
     nav .close-nav {
         position: absolute;
         top: 20px;
@@ -145,7 +128,7 @@ html {
     }
 
     .hero-image {
-        order: -1; /* รูปอยู่บน content */
+        order: -1; 
         max-height: 220px;
         overflow: hidden;
         border-radius: 12px;
@@ -246,9 +229,8 @@ html {
         gap: 0;
     }
 
-    /* Input ใหญ่ขึ้นบน mobile */
     input, select, textarea {
-        font-size: 16px !important; /* ป้องกัน iOS zoom */
+        font-size: 16px !important; 
         padding: 14px 15px;
         min-height: 48px;
     }
@@ -299,7 +281,7 @@ html {
     /* Chat app layout */
     .chat-app {
         grid-template-columns: 1fr !important;
-        height: 100dvh; /* dynamic viewport height - ป้องกัน keyboard */
+        height: 100dvh; 
     }
 
     /* Sidebar */
@@ -359,7 +341,6 @@ html {
         font-size: 11px;
     }
 
-    /* ซ่อนปุ่มบางอันบน mobile เพื่อประหยัดพื้นที่ */
     .chat-actions .btn-icon:nth-child(n+4) {
         display: none;
     }
@@ -381,7 +362,7 @@ html {
     }
 
     .input-container textarea {
-        font-size: 16px !important; /* ป้องกัน iOS zoom */
+        font-size: 16px !important; 
         min-height: 44px;
     }
 
@@ -430,7 +411,7 @@ html {
 
     /* Tabs ใน sidebar */
     .tab-btn span {
-        display: none; /* แสดงแค่ icon */
+        display: none; 
     }
 
     .tab-btn {
@@ -562,7 +543,6 @@ html {
         font-size: 20px !important;
     }
 
-    /* เพิ่ม padding ด้านล่าง เผื่อปุ่มทับ */
     .report-container {
         padding-bottom: 80px !important;
     }
@@ -573,7 +553,6 @@ html {
    ======================================== */
 
 @media (min-width: 769px) and (max-width: 1024px) {
-    /* Chat sidebar เล็กลงบน tablet */
     .chat-app {
         grid-template-columns: 260px 1fr !important;
     }
@@ -582,12 +561,10 @@ html {
         width: 260px !important;
     }
 
-    /* Auth หน้า login/register ยังแสดง 2 คอลัมน์ */
     .auth-container {
         grid-template-columns: 1fr 1fr;
     }
 
-    /* ซ่อน hospital info ถ้า screen แคบ */
     @media (max-width: 900px) {
         .hospital-info {
             display: none;
@@ -620,7 +597,6 @@ html {
     .message.received {
         max-width: 65% !important;
     }
-    /* ซ่อนปุ่มปิด nav บน desktop */
 nav .close-nav {
     display: none;
 }

@@ -1,11 +1,10 @@
-// setup_database.js - สำหรับสร้าง database และตาราง
 const mysql = require('mysql2');
 
-// Connection สำหรับ XAMPP (ไม่มีรหัสผ่าน)
+
 const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
-    password: '',  // ว่างเปล่า
+    password: '',  
     charset: 'utf8mb4'
 });
 
@@ -19,7 +18,7 @@ connection.connect((err) => {
     
     console.log('✅ Connected to MySQL');
     
-    // 1. สร้าง database
+    // สร้าง database
     connection.query('CREATE DATABASE IF NOT EXISTS ChatSMHKorat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci', (err) => {
         if (err) {
             console.error('❌ Create database failed:', err.message);
@@ -29,7 +28,7 @@ connection.connect((err) => {
         
         console.log('✅ Database created/verified');
         
-        // 2. ใช้ database
+        //  ใช้ database
         connection.changeUser({ database: 'ChatSMHKorat' }, (err) => {
             if (err) {
                 console.error('❌ Use database failed:', err.message);
@@ -39,7 +38,7 @@ connection.connect((err) => {
             
             console.log('✅ Using database ChatSMHKorat');
             
-            // 3. สร้างตาราง department
+            //  สร้างตาราง department
             const createDepartmentTable = `
                 CREATE TABLE IF NOT EXISTS department (
                     department_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -57,7 +56,7 @@ connection.connect((err) => {
                 
                 console.log('✅ Department table created');
                 
-                // 4. เพิ่มข้อมูลแผนก
+                //  เพิ่มข้อมูลแผนก
                 const departments = [
                     ['แผนกเกษตรกรรม'],
                     ['แผนกประชาสัมพันธ์ตลาด'],
@@ -114,7 +113,7 @@ connection.connect((err) => {
                     ['แผนกยานพาหนะ']
                 ];
                 
-                // ลบข้อมูลเก่า (ถ้ามี)
+             
                 connection.query('DELETE FROM department', (err) => {
                     if (err) {
                         console.error('❌ Clear department table failed:', err.message);
@@ -124,7 +123,7 @@ connection.connect((err) => {
                     
                     console.log('✅ Cleared department table');
                     
-                    // เพิ่มข้อมูลใหม่
+              
                     const insertQuery = 'INSERT INTO department (department_name) VALUES ?';
                     connection.query(insertQuery, [departments], (err, result) => {
                         if (err) {
@@ -135,7 +134,7 @@ connection.connect((err) => {
                         
                         console.log(`✅ Added ${result.affectedRows} departments`);
                         
-                        // 5. ตรวจสอบข้อมูล
+                        //  ตรวจสอบข้อมูล
                         connection.query('SELECT COUNT(*) as count FROM department', (err, results) => {
                             if (err) {
                                 console.error('❌ Count departments failed:', err.message);

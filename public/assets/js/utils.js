@@ -1,7 +1,5 @@
-// Utility Functions for Chat Application
-
 class Utils {
-    // Format date to Thai locale
+   
     static formatDateThai(date) {
         const thaiMonths = [
             'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน',
@@ -21,7 +19,7 @@ class Utils {
         return `${day} ${month} ${year} ${time}`;
     }
 
-    // Format relative time (e.g., "2 นาทีที่แล้ว")
+  
     static formatRelativeTime(date) {
         const now = new Date();
         const past = new Date(date);
@@ -44,19 +42,19 @@ class Utils {
         }
     }
 
-    // Validate email format
+  
     static isValidEmail(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return re.test(email);
     }
 
-    // Validate Thai phone number
+
     static isValidThaiPhone(phone) {
         const re = /^0[0-9]{8,9}$/;
         return re.test(phone);
     }
 
-    // Debounce function for limiting API calls
+   
     static debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -69,7 +67,7 @@ class Utils {
         };
     }
 
-    // Throttle function for scroll events
+   
     static throttle(func, limit) {
         let inThrottle;
         return function() {
@@ -83,12 +81,12 @@ class Utils {
         };
     }
 
-    // Generate unique ID
+ 
     static generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
-    // Safe JSON parse with fallback
+   
     static safeJsonParse(str, fallback = {}) {
         try {
             return JSON.parse(str);
@@ -97,22 +95,22 @@ class Utils {
         }
     }
 
-    // Check if object is empty
+   
     static isEmpty(obj) {
         return Object.keys(obj).length === 0;
     }
 
-    // Deep clone object
+  
     static deepClone(obj) {
         return JSON.parse(JSON.stringify(obj));
     }
 
-    // Get file extension
+  
     static getFileExtension(filename) {
         return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2);
     }
 
-    // Format file size
+
     static formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -121,35 +119,35 @@ class Utils {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    // Check if file is image
+
     static isImageFile(filename) {
         const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
         const ext = this.getFileExtension(filename).toLowerCase();
         return imageExtensions.includes(ext);
     }
 
-    // Check if file is document
+  
     static isDocumentFile(filename) {
         const docExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'];
         const ext = this.getFileExtension(filename).toLowerCase();
         return docExtensions.includes(ext);
     }
 
-    // Check if file is audio
+ 
     static isAudioFile(filename) {
         const audioExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'flac'];
         const ext = this.getFileExtension(filename).toLowerCase();
         return audioExtensions.includes(ext);
     }
 
-    // Check if file is video
+   
     static isVideoFile(filename) {
         const videoExtensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'];
         const ext = this.getFileExtension(filename).toLowerCase();
         return videoExtensions.includes(ext);
     }
 
-    // Get file icon based on type
+   
     static getFileIcon(filename) {
         if (this.isImageFile(filename)) return 'fa-file-image';
         if (this.isDocumentFile(filename)) return 'fa-file-alt';
@@ -158,39 +156,39 @@ class Utils {
         return 'fa-file';
     }
 
-    // Sanitize HTML to prevent XSS
+   
     static sanitizeHtml(html) {
         const div = document.createElement('div');
         div.textContent = html;
         return div.innerHTML;
     }
 
-    // Capitalize first letter of each word
+    
     static capitalizeWords(str) {
         return str.replace(/\b\w/g, char => char.toUpperCase());
     }
 
-    // Truncate text with ellipsis
+    
     static truncateText(text, maxLength) {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '...';
     }
 
-    // Check if user is online (based on last seen)
+   
     static isUserOnline(lastSeen) {
         if (!lastSeen) return false;
         const lastSeenDate = new Date(lastSeen);
         const now = new Date();
         const diffMinutes = (now - lastSeenDate) / (1000 * 60);
-        return diffMinutes < 5; // Consider online if seen within 5 minutes
+        return diffMinutes < 5; 
     }
 
-    // Get current timestamp in ISO format
+   
     static getCurrentTimestamp() {
         return new Date().toISOString();
     }
 
-    // Parse URL parameters
+    
     static getUrlParams() {
         const params = {};
         const queryString = window.location.search.substring(1);
@@ -206,27 +204,27 @@ class Utils {
         return params;
     }
 
-    // Set URL parameter
+   
     static setUrlParam(key, value) {
         const url = new URL(window.location);
         url.searchParams.set(key, value);
         window.history.pushState({}, '', url);
     }
 
-    // Remove URL parameter
+
     static removeUrlParam(key) {
         const url = new URL(window.location);
         url.searchParams.delete(key);
         window.history.pushState({}, '', url);
     }
 
-    // Copy text to clipboard
+  
     static async copyToClipboard(text) {
         try {
             await navigator.clipboard.writeText(text);
             return true;
         } catch (err) {
-            // Fallback for older browsers
+          
             const textArea = document.createElement('textarea');
             textArea.value = text;
             document.body.appendChild(textArea);
@@ -242,7 +240,7 @@ class Utils {
         }
     }
 
-    // Download file from URL
+
     static downloadFile(url, filename) {
         const a = document.createElement('a');
         a.href = url;
@@ -252,22 +250,22 @@ class Utils {
         document.body.removeChild(a);
     }
 
-    // Open file in new tab
+  
     static openFile(url) {
         window.open(url, '_blank');
     }
 
-    // Check if mobile device
+    
     static isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
-    // Check if touch device
+    
     static isTouchDevice() {
         return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     }
 
-    // Get browser info
+   
     static getBrowserInfo() {
         const ua = navigator.userAgent;
         let browser = 'Unknown';
@@ -282,7 +280,7 @@ class Utils {
         return browser;
     }
 
-    // Get OS info
+   
     static getOSInfo() {
         const ua = navigator.userAgent;
         let os = 'Unknown';
@@ -296,12 +294,12 @@ class Utils {
         return os;
     }
 
-    // Check if dark mode is enabled
+    
     static isDarkMode() {
         return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
 
-    // Create data URL from file
+   
     static createDataURL(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -311,7 +309,7 @@ class Utils {
         });
     }
 
-    // Compress image file
+ 
     static compressImage(file, maxWidth = 800, quality = 0.8) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -351,12 +349,12 @@ class Utils {
         });
     }
 
-    // Format number with commas (Thai style)
+   
     static formatNumber(num) {
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     }
 
-    // Generate random color
+    
     static getRandomColor() {
         const colors = [
             '#3498db', '#2ecc71', '#e74c3c', '#f39c12',
@@ -366,7 +364,7 @@ class Utils {
         return colors[Math.floor(Math.random() * colors.length)];
     }
 
-    // Get initials from name
+ 
     static getInitials(name) {
         return name
             .split(' ')
@@ -376,7 +374,7 @@ class Utils {
             .substring(0, 2);
     }
 
-    // Check if URL is valid
+    
     static isValidUrl(string) {
         try {
             new URL(string);
@@ -672,8 +670,6 @@ class Utils {
         // Send to error reporting service
         console.error('Error reported:', errorData);
         
-        // You can send this to your error tracking service
-        // Example: Sentry, Rollbar, etc.
         
         return errorData;
     }

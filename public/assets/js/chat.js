@@ -1,4 +1,3 @@
-// Chat Application Main JavaScript - Complete with Room Creation
 class EnhancedChatApp {
     constructor() {
         this.socket = null;
@@ -13,8 +12,8 @@ class EnhancedChatApp {
         this.typingTimeout = null;
         this.showingAllUsers = false;
         this.currentTab = 'rooms';
-        this.allRooms = []; // สำหรับเก็บห้องทั้งหมด (ใช้สำหรับค้นหา)
-        this.filteredRooms = []; // สำหรับเก็บห้องที่กรองแล้ว
+        this.allRooms = []; 
+        this.filteredRooms = []; 
         this.setupModalCloseButtons();
         this.optimisticMessages = new Map();
         this.isScrolling = false;
@@ -29,8 +28,8 @@ class EnhancedChatApp {
         this.thaiVoice = null;
         
         // ✅ Room creation properties
-        this.allUsers = []; // สำหรับเก็บรายชื่อสมาชิกทั้งหมด
-        this.selectedMemberIds = new Set(); // สำหรับเก็บสมาชิกที่เลือก
+        this.allUsers = []; 
+        this.selectedMemberIds = new Set(); 
         
          this.emojis = {
         smileys: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱'],
@@ -51,11 +50,9 @@ class EnhancedChatApp {
         this.updateUserData(e.detail);
     });
     }
-    // ✅ เพิ่มฟังก์ชัน setupModalCloseButtons
 setupModalCloseButtons() {
     console.log('🔧 Setting up modal close buttons...');
-    
-    // รายการ modal ที่ต้องการจัดการ
+
     const modalIds = [
         'createRoomModal',
         'addMembersModal', 
@@ -71,7 +68,6 @@ setupModalCloseButtons() {
         const modal = document.getElementById(modalId);
         if (!modal) return;
         
-        // ปุ่มปิด modal ทุกปุ่ม
         modal.querySelectorAll('.close-modal, .close-emoji-modal, .btn-secondary').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -79,7 +75,6 @@ setupModalCloseButtons() {
             });
         });
         
-        // คลิกนอก modal
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 modal.classList.remove('active');
@@ -98,7 +93,7 @@ setupModalCloseButtons() {
     
     console.log('✅ Modal close buttons setup complete');
 }
-    // ✅ เปิด emoji picker
+//  เปิด emoji picker
 openEmojiPicker() {
     const modal = document.getElementById('emojiPickerModal');
     if (!modal) {
@@ -110,7 +105,7 @@ openEmojiPicker() {
     this.renderEmojis(this.currentEmojiCategory);
 }
 
-// ✅ ปิด emoji picker
+//  ปิด emoji picker
 closeEmojiPicker() {
     const modal = document.getElementById('emojiPickerModal');
     if (modal) {
@@ -118,7 +113,7 @@ closeEmojiPicker() {
     }
 }
 
-// ✅ แสดงอิโมจิตามหมวดหมู่
+// แสดงอิโมจิตามหมวดหมู่
 renderEmojis(category) {
     this.currentEmojiCategory = category;
     const grid = document.getElementById('emojiGrid');
@@ -155,7 +150,6 @@ insertEmoji(emoji) {
         console.error('❌ Message input not found');
         return;
     }
-    
     // Focus input ก่อน
     messageInput.focus();
     
@@ -182,11 +176,11 @@ insertEmoji(emoji) {
     
     console.log('✅ Emoji inserted successfully');
     
-    // ✅ ไม่ปิด modal ให้เลือกต่อได้
+    // ไม่ปิด modal ให้เลือกต่อได้
     // Modal จะปิดเมื่อส่งข้อความแทน
 }
 
-// ✅ ค้นหาอิโมจิ
+//  ค้นหาอิโมจิ
 searchEmoji(query) {
     const grid = document.getElementById('emojiGrid');
     if (!grid) return;
@@ -218,7 +212,7 @@ searchEmoji(query) {
     }
 }
 
-// ✅ ตั้งค่า Event Listeners สำหรับ Emoji
+// ตั้งค่า Event Listeners สำหรับ Emoji
 setupEmojiPickerEvents() {
     // ปุ่มเปิด emoji picker
     const emojiBtn = document.getElementById('emojiBtn');
@@ -267,7 +261,7 @@ setupEmojiPickerEvents() {
         });
     }
 }
-    // ✅ เพิ่มฟังก์ชันแสดง preview
+    //  เพิ่มฟังก์ชันแสดง preview
 showFilePreview(files) {
     const previewArea = document.getElementById('filePreviewArea');
     const previewList = document.getElementById('filePreviewList');
@@ -314,15 +308,13 @@ showFilePreview(files) {
     });
 }
 
-// ✅ ลบไฟล์ออกจาก preview
+//  ลบไฟล์ออกจาก preview
 removeFileFromPreview(index) {
     this.selectedPreviewFiles.splice(index, 1);
     
     // อัพเดท file input
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
-        // สร้าง FileList ใหม่ (ไม่可以直接 set)
-        // วิธีง่าย: ล้างค่าแล้วให้เลือกใหม่
         fileInput.value = '';
     }
     
@@ -333,7 +325,7 @@ removeFileFromPreview(index) {
     }
 }
 
-// ✅ ล้าง preview ทั้งหมด
+//  ล้าง preview ทั้งหมด
 clearFilePreview() {
     this.selectedPreviewFiles = [];
     const previewArea = document.getElementById('filePreviewArea');
@@ -347,8 +339,6 @@ scrollToBottom(force = false) {
     const messagesList = document.getElementById('messagesList');
     if (!messagesList) return;
     
-    // ถ้า force = true (เราส่งเอง) → scroll เสมอ
-    // ถ้า force = false และผู้ใช้กำลังเลื่อนขึ้นอ่าน → ไม่ scroll
     if (!force && this.userIsReadingUp) return;
     
     messagesList.scrollTop = messagesList.scrollHeight;
@@ -366,7 +356,7 @@ async showAddMembersModal() {
         return;
     }
     
-    // ✅ ตรวจสอบว่าเป็นห้องแบบกลุ่มหรือไม่
+    //  ตรวจสอบว่าเป็นห้องแบบกลุ่มหรือไม่
     if (this.currentRoom.room_type !== 'group') {
         this.showNotification('ไม่สามารถเชิญได้', 'สามารถเชิญสมาชิกได้เฉพาะห้องแบบกลุ่มเท่านั้น', 'error');
         return;
@@ -380,7 +370,7 @@ async showAddMembersModal() {
     
     modal.classList.add('active');
     
-    // ✅ โหลดรายชื่อผู้ใช้ที่ยังไม่ได้อยู่ในห้อง
+    //  โหลดรายชื่อผู้ใช้ที่ยังไม่ได้อยู่ในห้อง
     try {
         const token = localStorage.getItem('token');
         
@@ -439,7 +429,6 @@ renderAddMembersList(users) {
     
     let html = '';
     users.forEach(user => {
-        // ✅ แก้ไขตรงนี้เหมือนกัน
         const isOnline = user.is_online === 1 || user.is_online === true || user.is_online === '1';
         const profileImage = user.profile_image || '/assets/images/default-avatar.png';
         
@@ -467,7 +456,7 @@ renderAddMembersList(users) {
     
     addMemberResults.innerHTML = html;
     
-    // ✅ เพิ่ม Event Listener สำหรับปุ่มเชิญ
+    // Event Listener สำหรับปุ่มเชิญ
     addMemberResults.querySelectorAll('.btn-add-member').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -476,7 +465,7 @@ renderAddMembersList(users) {
         });
     });
     
-    // ✅ ฟังก์ชันค้นหา
+    // ฟังก์ชันค้นหา
     if (addMemberSearch) {
         addMemberSearch.value = '';
         
@@ -526,11 +515,11 @@ async addMemberToRoom(userId) {
         if (response.ok) {
             this.showNotification('สำเร็จ', 'เชิญสมาชิกเข้าห้องสำเร็จ', 'success');
             
-            // ✅ ปิด modal
+            // ปิด modal
             const modal = document.getElementById('addMembersModal');
             if (modal) modal.classList.remove('active');
             
-            // ✅ แจ้งเตือนผ่าน Socket (ถ้ามี)
+            // แจ้งเตือนผ่าน Socket (ถ้ามี)
             if (this.socket && this.socket.connected) {
                 this.socket.emit('member_added', {
                     room_id: this.currentRoom.room_id,
@@ -638,7 +627,6 @@ switchTab(tabId) {
     }
 }
 // โหลดผู้ใช้ออนไลน์
-// โหลดผู้ใช้ออนไลน์
 async loadOnlineUsers() {
     try {
         const token = localStorage.getItem('token');
@@ -652,7 +640,7 @@ async loadOnlineUsers() {
             const data = await response.json();
             console.log('👥 Online users data from API:', data);
             
-            // ✅ ตรวจสอบโครงสร้างข้อมูล
+            //  ตรวจสอบโครงสร้างข้อมูล
             let onlineUsers = [];
             
             if (data.users && Array.isArray(data.users)) {
@@ -664,7 +652,7 @@ async loadOnlineUsers() {
                 onlineUsers = [];
             }
             
-            // ✅ บังคับให้ is_online เป็น 1 เสมอ
+            //  บังคับให้ is_online เป็น 1 เสมอ
             onlineUsers = onlineUsers.map(user => ({
                 ...user,
                 is_online: 1
@@ -672,7 +660,7 @@ async loadOnlineUsers() {
             
             console.log(`✅ Found ${onlineUsers.length} online users:`, onlineUsers);
             
-            // ✅ แสดงผลทันที
+            //  แสดงผลทันที
             this.renderUsersList(onlineUsers);
             
         } else {
@@ -684,7 +672,7 @@ async loadOnlineUsers() {
         console.error('❌ Error loading online users:', error);
         this.showNotification('โหลดข้อมูลล้มเหลว', 'ไม่สามารถโหลดข้อมูลผู้ใช้ออนไลน์ได้', 'error');
         
-        // ✅ แสดง empty state แทนการไม่แสดงอะไร
+        //  แสดง empty state แทนการไม่แสดงอะไร
         this.renderUsersList([]);
     }
 }
@@ -733,16 +721,15 @@ renderUsersList(users) {
     
     let html = '';
     users.forEach(user => {
-        // ✅ ใช้ค่าจริงจาก API ไม่บังคับ
+        // ใช้ค่าจริงจาก API ไม่บังคับ
         const isOnline = user.is_online === 1 || user.is_online === true || user.is_online === '1';
         
-        // ✅ ตรวจสอบว่ามีรูปโปรไฟล์หรือไม่
+        //  ตรวจสอบว่ามีรูปโปรไฟล์หรือไม่
         const hasProfileImage = user.profile_image && 
                                 user.profile_image !== '/assets/images/default-avatar.png' && 
                                 !user.profile_image.includes('default-avatar');
         
         if (hasProfileImage) {
-            // ✅ มีรูป → แสดงรูป
             html += `
                 <div class="user-item" data-user-id="${user.user_id}">
                     <div class="user-avatar">
@@ -763,7 +750,6 @@ renderUsersList(users) {
                 </div>
             `;
         } else {
-            // ✅ ไม่มีรูป → ใช้ตัวอักษรแรก
             const initial = user.full_name ? user.full_name.charAt(0).toUpperCase() : '?';
             
             html += `
@@ -791,19 +777,19 @@ renderUsersList(users) {
     console.log('✅ Users list rendered');
 }
 async initialize() {
-    // ✅ โหลด user จาก localStorage ก่อน
+    
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
         try {
             this.currentUser = JSON.parse(storedUser);
-            this.updateUserProfile(); // อัปเดต UI ทันที
+            this.updateUserProfile(); 
             console.log('👤 โหลด user จาก localStorage:', this.currentUser);
         } catch (e) {
             console.error('❌ parse localStorage user error:', e);
         }
     }
 
-    await this.checkAuth(); // เรียก API เพื่ออัปเดตข้อมูลล่าสุด
+    await this.checkAuth(); 
     this.initSocket();
     this.initTextToSpeech();
     this.addTTSStyles();
@@ -817,7 +803,7 @@ async initialize() {
     this.showMessageInput(false);
     this.addCreateRoomButton();
     
-    // ✅ ตรวจสอบว่า profileBtn มีใน DOM
+    // ตรวจสอบว่า profileBtn มีใน DOM
     console.log('🔍 Checking profileBtn in DOM...');
     const profileBtn = document.getElementById('profileBtn');
     console.log('✅ profileBtn found:', !!profileBtn);
@@ -826,23 +812,23 @@ async initialize() {
         console.log('📍 profileBtn parent:', profileBtn.parentElement?.tagName);
     }
     
-    // ✅ ตรวจสอบว่า profileModal มีใน DOM
+    // ตรวจสอบว่า profileModal มีใน DOM
     const profileModal = document.getElementById('profileModal');
     console.log('✅ profileModal found:', !!profileModal);
     if (profileModal) {
         console.log('📋 profileModal HTML:', profileModal.outerHTML.substring(0, 200) + '...');
     }
     
-    // ✅ เรียก setupEventListeners
+    //  เรียก setupEventListeners
     this.setupEventListeners();
     
     this.setupCreateRoomModalEvents();
     this.setupSidebarTabs();
     
-    // ✅ เพิ่มการตั้งค่าการค้นหา
+    //  เพิ่มการตั้งค่าการค้นหา
     this.setupSearchFunctionality();
     
-    // ✅ เพิ่มการตั้งค่า scroll behavior
+    //  เพิ่มการตั้งค่า scroll behavior
     this.setupScrollBehavior();
     this.setupEmojiPickerEvents();
 }
@@ -854,7 +840,7 @@ setupScrollBehavior() {
     messagesList.style.scrollBehavior = 'auto';
     messagesList.style.overflowY = 'scroll';
     
-    // ✅ flag ว่าผู้ใช้กำลังเลื่อนขึ้นอ่านอยู่
+    // flag ว่าผู้ใช้กำลังเลื่อนขึ้นอ่านอยู่
     this.userIsReadingUp = false;
     
     messagesList.addEventListener('scroll', () => {
@@ -884,7 +870,6 @@ isAtBottom(element, threshold = 50) {
     
     const atBottom = distance <= threshold;
     
-    // ✅ Debug log (ลบออกได้ถ้าไม่ต้องการ)
     // console.log('📏 Scroll check:', { scrollTop, scrollHeight, clientHeight, distance, atBottom });
     
     return atBottom;
@@ -914,7 +899,7 @@ isAtBottom(element, threshold = 50) {
             return;
         }
 
-        // ✅ อัปเดต currentUser และ localStorage ด้วยข้อมูลล่าสุด
+        
         this.currentUser = data.user;
         localStorage.setItem('user', JSON.stringify(data.user));
         this.updateUserProfile();
@@ -923,7 +908,7 @@ isAtBottom(element, threshold = 50) {
         
     } catch (error) {
         console.error('Auth check failed:', error);
-        // ✅ ถ้า API error ให้ใช้ข้อมูลจาก localStorage ที่มีอยู่แล้ว
+       
         if (this.currentUser) {
             console.log('⚠️ ใช้ข้อมูล user จาก localStorage แทน');
         } else {
@@ -944,11 +929,10 @@ isAtBottom(element, threshold = 50) {
 
     this.socket.on('connect', () => {
         console.log('✅ Socket connected:', this.socket.id);
-        
-        // แสดง token ที่จะส่งไป authentication
+       
         console.log('🔑 Token for auth:', token.substring(0, 20) + '...');
         
-        // ส่ง authentication
+        
         this.socket.emit('authenticate', token);
     });
 
@@ -956,7 +940,7 @@ isAtBottom(element, threshold = 50) {
         console.log('✅ Socket authenticated successfully:', data);
         this.updateUserStatus(true);
         
-        // ส่ง user data เพิ่มเติม
+     
         if (this.currentUser) {
             this.socket.emit('user_data', {
                 user_id: this.currentUser.user_id,
@@ -971,12 +955,12 @@ isAtBottom(element, threshold = 50) {
         this.showNotification('การเชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
     });
 
-    // ✅ เพิ่ม event listener สำหรับ room_created
+   
     this.socket.on('room_created', (data) => {
         console.log('🎉 Room created notification:', data);
         this.showNotification('สร้างห้องสำเร็จ', data.message || 'สร้างห้องใหม่สำเร็จ', 'success');
         
-        // โหลดห้องใหม่
+      
         this.loadChatRooms();
     });
 
@@ -1012,10 +996,10 @@ initTextToSpeech() {
     
     console.log('✅ Text-to-Speech พร้อมใช้งาน');
     
-    // ✅ โหลดค่าจาก localStorage ก่อน
+
     this.loadTTSPreferences();
     
-    // ✅ ถ้ายังไม่เคยตั้งค่า (localStorage ยังไม่มี) ให้เปิดเป็นค่าเริ่มต้น
+  
     if (localStorage.getItem('ttsEnabled') === null) {
         this.ttsEnabled = true;
         localStorage.setItem('ttsEnabled', 'true');
@@ -1044,7 +1028,7 @@ initTextToSpeech() {
         );
     }
     
-    // ✅ อัพเดทปุ่ม TTS ให้ตรงกับสถานะ
+ 
     const ttsToggleBtn = document.getElementById('ttsToggleBtn');
     if (ttsToggleBtn) {
         if (this.ttsEnabled) {
@@ -1058,7 +1042,7 @@ initTextToSpeech() {
         }
     }
     
-    // ✅ แสดงคำแนะนำการใช้งาน (เฉพาะตอนเปิด)
+ 
     if (this.ttsEnabled) {
         setTimeout(() => {
             this.showTTSNotification('อ่านข้อความได้โดยคลิกไอคอนลำโพงข้างข้อความ', 'info');
@@ -1144,12 +1128,12 @@ initTextToSpeech() {
         return;
     }
     
-    // บันทึกรายการห้องทั้งหมด (สำหรับค้นหา)
+   
     if (rooms === this.rooms) {
         this.allRooms = [...rooms];
     }
     
-    // แสดงจำนวนห้อง
+  
     if (roomCount) {
         roomCount.textContent = rooms.length;
     }
@@ -1245,14 +1229,14 @@ setupSearchFunctionality() {
     searchInput.addEventListener('input', (e) => {
         const searchTerm = e.target.value;
         
-        // ใช้ debounce เพื่อป้องกันการค้นหาบ่อยเกินไป
+       
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             this.searchChatRooms(searchTerm);
-        }, 300); // หน่วงเวลา 300ms
+        }, 300); 
     });
     
-    // Event listener สำหรับปุ่มล้าง
+  
     searchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             searchInput.value = '';
@@ -1261,11 +1245,11 @@ setupSearchFunctionality() {
         }
     });
     
-    // เพิ่มปุ่มล้างค้นหา (ถ้าต้องการ)
+    
     this.addClearSearchButton(searchInput);
 }
 
-// เพิ่มปุ่มล้างค้นหา (optional)
+
 addClearSearchButton(searchInput) {
     // สร้างปุ่มล้าง
     const clearBtn = document.createElement('button');
@@ -1288,7 +1272,6 @@ addClearSearchButton(searchInput) {
         display: none;
     `;
     
-    // เพิ่ม event listener
     clearBtn.addEventListener('click', () => {
         searchInput.value = '';
         this.searchChatRooms('');
@@ -1304,7 +1287,7 @@ addClearSearchButton(searchInput) {
         }
     });
     
-    // เพิ่มปุ่มใน container
+    // ปุ่มใน container
     searchInput.parentElement.style.position = 'relative';
     searchInput.parentElement.appendChild(clearBtn);
 }
@@ -1413,7 +1396,7 @@ createRoomItemHTML(room, type, searchTerm = '') {
         return;
     }
 
-    // ใช้ DocumentFragment เพื่อเพิ่มประสิทธิภาพ
+   
     const fragment = document.createDocumentFragment();
     messages.forEach(message => {
         const messageElement = this.createMessageElement(message);
@@ -1422,12 +1405,12 @@ createRoomItemHTML(room, type, searchTerm = '') {
     
     messagesList.appendChild(fragment);
 
-    // ✅ รอให้ DOM อัพเดทแล้วค่อย scroll (เพิ่มเวลารอ)
+   
     setTimeout(() => {
         this.scrollToBottom(true);
     }, 150);
     
-    // ✅ Scroll อีกครั้งเพื่อความแน่ใจ
+   
     setTimeout(() => {
         this.scrollToBottom(true);
     }, 300);
@@ -1456,7 +1439,7 @@ createMessageElement(message) {
                (message.file_name && message.file_name.match(/\.(jpeg|jpg|png|gif|webp)$/i)) ||
                (message.file_url && message.file_url.includes('cloudinary.com') && message.file_url.includes('/image/upload/'));
         
-        // ✅ Decode ชื่อไฟล์อีกครั้งเพื่อความแน่ใจ
+       
         const displayName = message.file_name || 'ไฟล์';
         const fileSize = message.file_size ? `(${(message.file_size/1024).toFixed(1)} KB)` : '';
         
@@ -1502,7 +1485,7 @@ createMessageElement(message) {
         }
     }
     
-    // ... ส่วนที่เหลือเหมือนเดิม
+   
     const time = new Date(message.created_at).toLocaleTimeString('th-TH', {
         hour: '2-digit',
         minute: '2-digit'
@@ -1664,23 +1647,23 @@ createMessageElement(message) {
             badgeElement.style.display = 'inline-block';
         }
 
-        // ✅ แสดงปุ่มสรุป AI
+        // แสดงปุ่มสรุป AI
         const aiSummaryBtn = document.getElementById('aiSummaryBtn');
         if (aiSummaryBtn) {
             aiSummaryBtn.style.display = 'flex';
-            // ลบ event listener เก่า (ถ้ามี)
+           
             const newBtn = aiSummaryBtn.cloneNode(true);
             aiSummaryBtn.parentNode.replaceChild(newBtn, aiSummaryBtn);
-            // เพิ่ม event listener ใหม่
+            
             newBtn.addEventListener('click', () => this.showAISummary());
         }
 
-        // ✅ แสดง/ซ่อนปุ่มตามประเภทห้อง
+        //  แสดง/ซ่อนปุ่มตามประเภทห้อง
         const addToRoomBtn = document.getElementById('addToRoomBtn');
         const leaveRoomBtn = document.getElementById('leaveRoomBtn');
         const roomMembersBtn = document.getElementById('roomMembersBtn');
         
-        // ✅ แสดงปุ่มเชิญเพื่อนเฉพาะห้องแบบกลุ่ม
+        //  แสดงปุ่มเชิญเพื่อนเฉพาะห้องแบบกลุ่ม
         if (addToRoomBtn) {
             if (room.room_type === 'group') {
                 addToRoomBtn.style.display = 'flex';
@@ -1689,7 +1672,7 @@ createMessageElement(message) {
             }
         }
         
-        // ✅ แสดงปุ่มออกจากห้องเฉพาะกลุ่มและส่วนตัว (ไม่ใช่แผนก)
+        //  แสดงปุ่มออกจากห้องเฉพาะกลุ่มและส่วนตัว (ไม่ใช่แผนก)
         if (leaveRoomBtn) {
             if (room.room_type === 'group' || room.room_type === 'private') {
                 leaveRoomBtn.style.display = 'flex';
@@ -1698,7 +1681,7 @@ createMessageElement(message) {
             }
         }
         
-        // ✅ แสดงปุ่มดูสมาชิกทุกห้อง
+        //  แสดงปุ่มดูสมาชิกทุกห้อง
         if (roomMembersBtn) {
             roomMembersBtn.style.display = 'flex';
         }
@@ -1780,7 +1763,7 @@ createMessageElement(message) {
             return;
         }
         
-        // ✅ OPTIMISTIC UI: สร้างข้อความชั่วคราว
+        //  OPTIMISTIC UI: สร้างข้อความชั่วคราว
         const tempId = 'temp_' + Date.now();
         const tempMessage = {
             message_id: tempId,
@@ -1800,7 +1783,6 @@ createMessageElement(message) {
         messageInput.style.height = 'auto';
         document.getElementById('characterCount').textContent = '0/1000';
         
-        // ✅ ส่งไป server
         const response = await fetch(`/api/chat-rooms/${this.currentRoom.room_id}/messages`, {
             method: 'POST',
             headers: {
@@ -1817,7 +1799,7 @@ createMessageElement(message) {
             const data = await response.json();
             console.log('✅ ส่งข้อความสำเร็จ (API):', data);
             
-            // ✅ แทนที่ข้อความชั่วคราวด้วยข้อความจริง
+            
             this.replaceTempMessage(tempId, data.message || data);
             
             if (this.socket) {
@@ -1825,7 +1807,6 @@ createMessageElement(message) {
                 this.isTyping = false;
             }
         } else {
-            // ลบข้อความชั่วคราวถ้าส่งไม่สำเร็จ
             this.removeTempMessage(tempId);
             const errorData = await response.json();
             console.error('❌ ส่งข้อความล้มเหลว:', errorData);
@@ -1850,17 +1831,14 @@ async handleSendMessage() {
         return;
     }
     
-    // ปิด emoji picker อัตโนมัติ
     this.closeEmojiPicker();
     
-    // ส่งไฟล์ก่อน (ถ้ามี)
     if (hasFiles) {
         console.log('📤 Uploading files first...');
         await this.uploadFiles(this.selectedPreviewFiles);
         this.clearFilePreview();
     }
     
-    // ส่งข้อความ (ถ้ามี)
     if (hasMessage) {
         console.log('📤 Sending text message...');
         
@@ -1875,10 +1853,9 @@ async handleSendMessage() {
             created_at: new Date().toISOString()
         };
         
-        // ✅ เพิ่มข้อความ + scroll
         this.addOptimisticMessage(tempMessage);
         
-        // ล้าง input
+        
         messageInput.value = '';
         messageInput.style.height = 'auto';
         const charCount = document.getElementById('characterCount');
@@ -1902,7 +1879,7 @@ async handleSendMessage() {
                 const data = await response.json();
                 console.log('✅ ส่งข้อความสำเร็จ:', data);
                 
-                // ✅ แทนที่ + scroll
+              
                 this.replaceTempMessage(tempId, data.message || data);
                 
                 if (this.socket) {
@@ -1927,7 +1904,6 @@ async handleSendMessage() {
     }
 }
 
-// ✅ ล้าง preview ไฟล์
 clearFilePreview() {
     this.selectedPreviewFiles = [];
     const previewArea = document.getElementById('filePreviewArea');
@@ -1953,35 +1929,35 @@ addOptimisticMessage(message) {
     
     console.log('➕ Adding optimistic message:', message.message_id);
     
-    // ลบ welcome message ถ้ามี
+    
     const emptyChat = messagesList.querySelector('.empty-chat');
     const welcomeMessage = messagesList.querySelector('.welcome-message');
     if (emptyChat) emptyChat.remove();
     if (welcomeMessage) welcomeMessage.remove();
     
-    // สร้าง element
+   
     const messageElement = this.createMessageElement(message);
     messageElement.classList.add('temp-message');
     messageElement.style.opacity = '0.8';
     
-    // เพิ่มลงใน list
+   
     messagesList.appendChild(messageElement);
     
     const isMyMessage = message.sender_id === this.currentUser?.user_id;
         
         if (isMyMessage) {
-            // ข้อความของเรา → scroll ลงเสมอ
+           
             this.scrollToBottom(true);
         } else if (this.userIsReadingUp) {
-            // คนอื่นส่งมา + เรากำลังเลื่อนขึ้นอ่านอยู่ → แสดง badge แทน
+            
             this.showNewMessageBadge(message.full_name);
         } else {
-            // คนอื่นส่งมา + เราอยู่ล่างสุดอยู่แล้ว → scroll ลงปกติ
+           
             this.scrollToBottom(false);
         }
 }
 showNewMessageBadge(senderName = '') {
-    // ถ้ามี badge อยู่แล้วให้อัปเดตข้อความแทน
+  
     let badge = document.getElementById('newMsgBadge');
     
     if (!badge) {
@@ -2017,7 +1993,7 @@ replaceTempMessage(tempId, realMessage) {
     if (tempElement) {
         console.log('🔄 Replacing temp message:', tempId, '→', realMessage.message_id);
         
-        // ✅ ตรวจสอบว่าข้อความจริงยังไม่มี
+        
         const existingReal = document.querySelector(`[data-message-id="${realMessage.message_id}"]`);
         if (existingReal && existingReal !== tempElement) {
             console.log('⚠️ ข้อความจริงมีอยู่แล้ว, ลบ optimistic เท่านั้น');
@@ -2030,7 +2006,7 @@ replaceTempMessage(tempId, realMessage) {
         
         console.log('✅ Message replaced, scrolling...');
         
-        // ✅ Scroll หลายครั้ง
+        
         const messagesList = document.getElementById('messagesList');
         messagesList.scrollTop = messagesList.scrollHeight;
         
@@ -2048,7 +2024,7 @@ replaceTempMessage(tempId, realMessage) {
         }, 100);
     }
 }
-// ✅ ลบข้อความชั่วคราว
+
 removeTempMessage(tempId) {
     const tempElement = document.querySelector(`[data-message-id="${tempId}"]`);
     if (tempElement) {
@@ -2063,14 +2039,14 @@ handleNewMessage(message) {
         
         const messagesList = document.getElementById('messagesList');
         
-        // ✅ ตรวจสอบว่ามีข้อความนี้อยู่แล้วหรือไม่
+      
         const existingMessage = document.querySelector(`[data-message-id="${message.message_id}"]`);
         if (existingMessage) {
             console.log('⏭️ ข้อความนี้มีอยู่แล้ว, ข้ามการเพิ่ม');
             return;
         }
         
-        // ✅ ตรวจสอบว่ามีข้อความชั่วคราวที่รอแทนที่หรือไม่
+        
         const tempMessage = messagesList.querySelector('[data-message-id^="temp_"]');
         if (tempMessage) {
             console.log('⏭️ มี optimistic message อยู่, รอการแทนที่');
@@ -2087,7 +2063,7 @@ handleNewMessage(message) {
         
         console.log('📜 New message added, scrolling...');
         
-        // ✅ Scroll ทันทีหลายครั้ง
+     
         messagesList.scrollTop = messagesList.scrollHeight;
         
         requestAnimationFrame(() => {
@@ -2119,23 +2095,23 @@ handleNewMessage(message) {
     if (ttsToggleBtn) {
         if (this.ttsEnabled) {
             // ถ้าเปิดใช้งาน
-            ttsToggleBtn.innerHTML = '<i class="fas fa-volume-up"></i>';  // เปลี่ยนเป็น icon ลำโพงปกติ
+            ttsToggleBtn.innerHTML = '<i class="fas fa-volume-up"></i>';  
             ttsToggleBtn.title = 'ปิดการอ่านข้อความ';
-            ttsToggleBtn.style.color = '#2ecc71';  // สีเขียว
+            ttsToggleBtn.style.color = '#2ecc71';  
             console.log('🔊 เปิดการอ่านข้อความ');
             this.showTTSNotification('เปิดการอ่านข้อความแล้ว', 'success');
         } else {
             // ถ้าปิดใช้งาน
-            ttsToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';  // เปลี่ยนเป็น icon ปิดเสียง
+            ttsToggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>'; 
             ttsToggleBtn.title = 'เปิดการอ่านข้อความ';
-            ttsToggleBtn.style.color = '';  // กลับเป็นสีปกติ
+            ttsToggleBtn.style.color = '';  
             this.stopSpeaking();
             console.log('🔇 ปิดการอ่านข้อความ');
             this.showTTSNotification('ปิดการอ่านข้อความแล้ว', 'info');
         }
     }
     
-    // ✅ แสดงข้อความแนะนำ (เฉพาะตอนเปิด)
+    // แสดงข้อความแนะนำ (เฉพาะตอนเปิด)
     if (this.ttsEnabled) {
         setTimeout(() => {
             this.showTTSNotification('อ่านข้อความได้โดยคลิกไอคอนลำโพงข้างข้อความ', 'info');
@@ -2208,12 +2184,11 @@ handleNewMessage(message) {
 addEmojiPickerStyles() {
     const style = document.createElement('style');
     style.textContent = `
-        /* Emoji Modal - ฝั่งซ้าย ไม่ทับช่องพิมพ์ */
         .emoji-modal {
             display: none;
             position: fixed;
-            bottom: 120px;  /* ✅ เว้นระยะจากช่องพิมพ์ */
-            left: 280px;    /* ✅ อยู่ฝั่งซ้าย ถัดจาก sidebar */
+            bottom: 120px;  
+            left: 280px;    
             z-index: 9999;
             animation: slideUpEmoji 0.3s ease;
         }
@@ -2442,7 +2417,7 @@ addEmojiPickerStyles() {
             color: white;
         }
         
-        /* ✅ Responsive สำหรับจอเล็ก */
+        /*  Responsive สำหรับจอเล็ก */
         @media (max-width: 768px) {
             .emoji-modal {
                 left: 50%;
@@ -2456,7 +2431,7 @@ addEmojiPickerStyles() {
             }
         }
         
-        /* ✅ Loading state */
+        /*  Loading state */
         .emoji-grid.loading::after {
             content: 'กำลังโหลด...';
             position: absolute;
@@ -2470,27 +2445,25 @@ addEmojiPickerStyles() {
     document.head.appendChild(style);
     const scrollStyles = document.createElement('style');
 scrollStyles.textContent = `
-    /* ✅ ปรับปรุงการ scroll */
     #messagesList {
-        scroll-behavior: auto !important;  /* ✅ ไม่ใช้ smooth เพราะทำให้ช้า */
+        scroll-behavior: auto !important;  
         overflow-y: scroll !important;
         overflow-x: hidden !important;
         height: 100%;
         position: relative;
     }
     
-    /* ✅ ป้องกัน layout shift */
     .message {
         margin-bottom: 4px;
         will-change: auto;
     }
     
-    /* ✅ ลบ animation ที่อาจทำให้ scroll ไม่ทำงาน */
+  
     .temp-message {
         animation: none !important;
     }
     
-    /* ✅ Optimistic message ไม่มี transition */
+   
     .temp-message * {
         transition: none !important;
     }
@@ -2624,8 +2597,6 @@ document.head.appendChild(scrollStyles);
             background-color: rgba(52, 152, 219, 0.05);
         }
         
-        /* ===== ✅ เพิ่ม CSS นี้ต่อท้าย ===== */
-        /* บังคับให้ปุ่ม TTS แสดงตลอดเวลา */
         .mini-tts-btn {
             opacity: 1 !important;
             display: inline-flex !important;
@@ -2670,7 +2641,7 @@ document.head.appendChild(scrollStyles);
         return;
     }
     
-    // ✅ เพิ่มเงื่อนไข: ไม่ต้องเปิด TTS ก็อ่านได้ (สำหรับการคลิกไอคอนลำโพง)
+   
     if (!this.ttsEnabled && !force) {
         this.showTTSNotification('กรุณาเปิดการอ่านข้อความก่อน', 'info');
         return;
@@ -2701,7 +2672,7 @@ document.head.appendChild(scrollStyles);
         console.log('🔊 เริ่มอ่านข้อความทันที:', text.substring(0, 50));
         this.currentSpeech = utterance;
         
-        // ✅ แสดง notification เฉพาะเมื่ออ่านผ่านไอคอนลำโพง
+       
         if (!force) {
             this.showTTSNotification('กำลังอ่านข้อความ...', 'info');
         }
@@ -2711,7 +2682,7 @@ document.head.appendChild(scrollStyles);
         console.log('✅ อ่านข้อความเสร็จสิ้น');
         this.currentSpeech = null;
         
-        // ✅ แสดง notification เฉพาะเมื่ออ่านผ่านไอคอนลำโพง
+       
         if (!force) {
             this.showTTSNotification('อ่านข้อความเสร็จสิ้น', 'success');
         }
@@ -2721,7 +2692,7 @@ document.head.appendChild(scrollStyles);
         console.error('❌ ข้อผิดพลาดในการอ่าน:', event);
         this.currentSpeech = null;
         
-        // ✅ แสดง notification เฉพาะเมื่ออ่านผ่านไอคอนลำโพง
+       
         if (!force) {
             this.showTTSNotification('เกิดข้อผิดพลาดในการอ่าน', 'error');
         }
@@ -2871,7 +2842,7 @@ filePreviewStyles.textContent = `
     }
 `;
 document.head.appendChild(filePreviewStyles);
-        // เพิ่ม CSS สำหรับ Date Range Picker
+        
 const dateRangeStyles = document.createElement('style');
 dateRangeStyles.textContent = `
     .btn-quick-date {
@@ -2910,7 +2881,7 @@ dateRangeStyles.textContent = `
     }
 `;
 document.head.appendChild(dateRangeStyles);
-        // เพิ่ม CSS สำหรับ Optimistic UI
+        
 const optimisticStyles = document.createElement('style');
 optimisticStyles.textContent = `
     /* Optimistic UI สำหรับข้อความที่กำลังส่ง */
@@ -2974,7 +2945,7 @@ optimisticStyles.textContent = `
     }
 `;
 document.head.appendChild(optimisticStyles);
-        // ✅ เพิ่ม CSS สำหรับปุ่มดูรายงาน
+       
 const reportButtonStyles = document.createElement('style');
 reportButtonStyles.textContent = `
     /* ปุ่มสรุปผลรายงาน */
@@ -3077,7 +3048,6 @@ reportButtonStyles.textContent = `
     }
 `;
 document.head.appendChild(reportButtonStyles);
-        // ในฟังก์ชัน addTTSStyles หรือ addCreateRoomStyles
          const summaryButtonStyles = document.createElement('style');
     summaryButtonStyles.textContent = `
         /* Summary Modal Footer */
@@ -3507,13 +3477,13 @@ document.head.appendChild(roomMembersStyles);
             }
             
            .modal-footer {
-    display: flex;
-    gap: 12px;
-    padding: 20px 24px;
-    border-top: 1px solid #e2e8f0;
-    justify-content: flex-end;
-    background: #f8fafc;
-}
+                display: flex;
+                gap: 12px;
+                padding: 20px 24px;
+                border-top: 1px solid #e2e8f0;
+                justify-content: flex-end;
+                background: #f8fafc;
+            }
             
             .form-group {
                 margin-bottom: 20px;
@@ -3789,7 +3759,7 @@ document.head.appendChild(roomMembersStyles);
             }
         `;
         document.head.appendChild(style);
-        // ในฟังก์ชัน addTTSStyles หรือ addCreateRoomStyles
+       
 const userStyles = document.createElement('style');
 userStyles.textContent = `
     /* User item styles */
@@ -3953,7 +3923,7 @@ userStyles.textContent = `
     }
 `;
 document.head.appendChild(userStyles);
-// ในฟังก์ชัน addTTSStyles หรือ addCreateRoomStyles
+
 const searchStyles = document.createElement('style');
 searchStyles.textContent = `
     /* Search bar styles */
@@ -4061,42 +4031,36 @@ document.head.appendChild(searchStyles);
     console.log('🚀 เปิด Modal สร้างห้อง...');
 
     // ---- รีเซ็ตค่าทั้งหมดก่อนเปิดใหม่ทุกครั้ง ----
-    this.selectedMemberIds.clear(); // ล้างรายชื่อที่เคยเลือกไว้
+    this.selectedMemberIds.clear(); 
 
     const roomNameInput  = document.getElementById('roomNameInput');
     const memberSearch   = document.getElementById('memberSearch');
     const roomNameCount  = document.getElementById('roomNameCount');
 
     if (roomNameInput) {
-        roomNameInput.value = '';                           // ล้างชื่อห้อง
-        if (roomNameCount) roomNameCount.textContent = '0'; // รีเซ็ตตัวนับ
+        roomNameInput.value = '';                         
+        if (roomNameCount) roomNameCount.textContent = '0'; 
     }
-    if (memberSearch) memberSearch.value = ''; // ล้างช่องค้นหา
+    if (memberSearch) memberSearch.value = ''; 
 
-    // ---- เลือกประเภทห้องเป็น "กลุ่ม" เป็นค่าเริ่มต้น ----
+  
     const groupRadio = document.querySelector('input[name="roomType"][value="group"]');
     if (groupRadio) groupRadio.checked = true;
 
-    // ---- แสดง Modal ก่อน (สำคัญ!) ----
-    // ต้องแสดง Modal ก่อนที่จะโหลดข้อมูล
-    // เพราะถ้าโหลดข้อมูลก่อน element #membersList ยังไม่มีใน DOM
-    // จะทำให้ไม่สามารถใส่ข้อมูลลงไปได้
     const modal = document.getElementById('createRoomModal');
     if (!modal) {
         console.error('❌ ไม่พบ element createRoomModal ใน HTML');
         return;
     }
-    modal.classList.add('active'); // แสดง Modal
+    modal.classList.add('active'); 
     console.log('✅ Modal เปิดแล้ว');
 
-    // โฟกัสที่ช่องพิมพ์ชื่อห้องหลังจาก animation เสร็จ
+    
     setTimeout(() => {
         if (roomNameInput) roomNameInput.focus();
     }, 300);
 
-    // ---- โหลดรายชื่อสมาชิกเข้า Modal ----
-    // ใช้ loadUsersForModal() แทน loadAllUsers()
-    // เพราะ loadAllUsers() แสดงผลใน Sidebar ไม่ใช่ใน Modal
+   
     await this.loadUsersForModal();
 }
 async loadUsersForModal() {
@@ -4161,7 +4125,6 @@ async loadUsersForModal() {
         }
 
         // แสดงรายชื่อผู้ใช้ใน Modal โดยเรียก renderMembersList()
-        // ส่ง '' (ค่าว่าง) เพราะยังไม่ได้พิมพ์ค้นหาอะไร
         this.renderMembersList('');
 
     } catch (error) {
@@ -4188,7 +4151,6 @@ async loadUsersForModal() {
         this.showNotification('โหลดข้อมูลล้มเหลว', error.message, 'error');
     }
 }
-   
 // ฟังก์ชันแสดงสมาชิกในห้อง
 async showRoomMembers() {
     if (!this.currentRoom) {
@@ -4324,7 +4286,7 @@ renderRoomMembersModal(members) {
         const q = searchQuery.toLowerCase().trim();
         return (
             (user.full_name       || '').toLowerCase().includes(q) ||
-            (user.email           || '').toLowerCase().includes(q) ||  // ✅ ป้องกัน null
+            (user.email           || '').toLowerCase().includes(q) ||  
             (user.employee_id     || '').toLowerCase().includes(q) ||
             (user.department_name || '').toLowerCase().includes(q)
         );
@@ -4451,7 +4413,7 @@ renderRoomMembersModal(members) {
     let isValid = true;
     let errorMessage = '';
     
-    // ✅ ตรวจสอบชื่อห้อง
+    //  ตรวจสอบชื่อห้อง
     if (roomName.length < 1) {
         isValid = false;
         errorMessage = 'กรุณาใส่ชื่อห้อง';
@@ -4460,7 +4422,7 @@ renderRoomMembersModal(members) {
         errorMessage = 'ชื่อห้องยาวเกิน 100 ตัวอักษร';
     }
     
-    // ✅ ตรวจสอบสมาชิก
+    //  ตรวจสอบสมาชิก
     if (isValid) {
         if (roomType === 'private' && this.selectedMemberIds.size !== 1) {
             isValid = false;
@@ -4471,10 +4433,9 @@ renderRoomMembersModal(members) {
         }
     }
     
-    // ✅ อัพเดทปุ่ม
     createButton.disabled = !isValid;
     
-    // ✅ แสดงข้อความ error (ถ้ามี element)
+    //  แสดงข้อความ error (ถ้ามี element)
     const errorElement = document.getElementById('createRoomError');
     if (errorElement) {
         errorElement.textContent = errorMessage;
@@ -4495,7 +4456,7 @@ async showAISummary() {
         return;
     }
     
-    // ✅ ตรวจสอบจำนวนข้อความในห้อง
+    // ตรวจสอบจำนวนข้อความในห้อง
     const messagesList = document.getElementById('messagesList');
     const messageCount = messagesList.querySelectorAll('.message').length;
     
@@ -4504,7 +4465,7 @@ async showAISummary() {
         return;
     }
     
-    // ✅ แสดงตัวเลือกช่วงเวลา
+    //  แสดงตัวเลือกช่วงเวลา
     this.showDateRangePicker();
 }
 showDateRangePicker() {
@@ -4569,22 +4530,22 @@ showDateRangePicker() {
             </div>
             <div class="modal-footer" style="padding:15px 20px; border-top:1px solid #eee; display:flex; gap:10px; justify-content:flex-end;">
                <button class="btn btn-secondary close-modal" style="
-    padding: 10px 20px; 
-    background: #6c757d; 
-    color: white; 
-    border: none; 
-    border-radius: 6px; 
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
-    font-weight: 500;
-    line-height: 1;
-">
-    <i class="fas fa-times" style="font-size: 13px;"></i> ยกเลิก
-</button>
+                    padding: 10px 20px; 
+                    background: #6c757d; 
+                    color: white; 
+                    border: none; 
+                    border-radius: 6px; 
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 14px;
+                    font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+                    font-weight: 500;
+                    line-height: 1;
+                ">
+                    <i class="fas fa-times" style="font-size: 13px;"></i> ยกเลิก
+                </button>
                 <button id="confirmDateRange" class="btn btn-primary" style="padding:10px 20px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:6px; cursor:pointer;">
                     <i class="fas fa-brain"></i> สรุปการสนทนา
                 </button>
@@ -4594,7 +4555,6 @@ showDateRangePicker() {
     
     document.body.appendChild(modal);
     
-    // ตั้งค่าวันที่เริ่มต้น (7 วันล่าสุด)
     const today = new Date();
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(today.getDate() - 7);
@@ -4609,7 +4569,7 @@ showDateRangePicker() {
     document.getElementById('startDate').value = formatDate(sevenDaysAgo);
     document.getElementById('endDate').value = formatDate(today);
     
-    // Event listeners สำหรับปุ่มลัด
+
     modal.querySelectorAll('.btn-quick-date').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const days = e.target.dataset.days;
@@ -4617,7 +4577,7 @@ showDateRangePicker() {
             const startDate = new Date();
             
             if (days === 'all') {
-                // ทั้งหมด - ปล่อยว่าง
+                
                 document.getElementById('startDate').value = '';
                 document.getElementById('endDate').value = '';
             } else {
@@ -4628,7 +4588,7 @@ showDateRangePicker() {
         });
     });
     
-    // ปุ่มปิด modal
+   
     modal.querySelectorAll('.close-modal').forEach(btn => {
         btn.addEventListener('click', () => modal.remove());
     });
@@ -4637,13 +4597,13 @@ showDateRangePicker() {
         if (e.target === modal) modal.remove();
     });
     
-    // ปุ่มยืนยัน
+
     document.getElementById('confirmDateRange').addEventListener('click', async () => {
         const startDate = document.getElementById('startDate').value;
         const endDate = document.getElementById('endDate').value;
         const messageCount = document.getElementById('messageCount').value;
         
-        // ตรวจสอบวันที่
+       
         if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
             this.showNotification('ข้อผิดพลาด', 'วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด', 'error');
             return;
@@ -4651,15 +4611,15 @@ showDateRangePicker() {
         
         modal.remove();
         
-        // ✅ แสดง loading modal
+       
         this.showLoadingModal('กำลังสร้างสรุปการสนทนา...');
         
-        // เรียก API
+      
         await this.callSummaryAPI(startDate, endDate, messageCount);
     });
 }
 showSummaryResult(data) {
-    // ลบ modal เก่าถ้ามี
+
     const oldModal = document.getElementById('aiSummaryModal');
     if (oldModal) oldModal.remove();
     
@@ -4757,7 +4717,7 @@ showSummaryResult(data) {
     });
 }
 
-// ใน chat.js (ฟังก์ชัน callSummaryAPI)
+
 async callSummaryAPI(startDate, endDate, messageCount) {
     try {
         const aiSummarizer = new ChatSummaryAI();
@@ -4829,9 +4789,9 @@ showMockAISummary() {
 
     this.createAndShowSummaryModal(mockSummary);
 }
-// ✅ ฟังก์ชันสร้าง modal สรุป (เพิ่มเข้าไป)
+
 createSummaryModal() {
-    // ลบ modal เก่าถ้ามี
+    
     const oldModal = document.getElementById('aiSummaryModal');
     if (oldModal) oldModal.remove();
     
@@ -4890,7 +4850,7 @@ createSummaryModal() {
 displaySummary(summary, stats, summaryId = null, reportUrl = null) {
     const summaryContent = document.getElementById('summaryContent');
     
-    // ✅ สร้าง URL ถ้าไม่มี
+   
     if (!reportUrl && summaryId && stats.room_id) {
         reportUrl = `/report?id=${summaryId}&room_id=${stats.room_id}`;
     }
@@ -4918,7 +4878,6 @@ displaySummary(summary, stats, summaryId = null, reportUrl = null) {
                 ${this.formatSummary(summary)}
             </div>
             
-            <!-- ✅ เพิ่มปุ่มดูรายงาน -->
             ${reportUrl ? `
             <div class="summary-actions">
                 <button class="btn-view-report" onclick="window.open('${reportUrl}', '_blank', 'width=1200,height=800')">
@@ -4933,24 +4892,23 @@ displaySummary(summary, stats, summaryId = null, reportUrl = null) {
     `;
     
     this.setupSummaryModalButtons(summaryId, stats.room_id, summary, reportUrl);
-    // ⬆️ จบฟังก์ชัน displaySummary ที่นี่ ⬆️
+    
 }
-// ⬇️ ฟังก์ชัน setupSummaryModalButtons ต้องอยู่นอก displaySummary ⬇️
 
 setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
-    // ✅ สร้าง reportUrl ถ้าไม่มี
+    
     if (!reportUrl && summaryId && roomId) {
         reportUrl = `/report?id=${summaryId}&room_id=${roomId}`;
     }
     
-    // ✅ ปุ่มคัดลอก
+
     const copyBtn = document.getElementById('copySummaryBtn');
     if (copyBtn) {
-        // ลบ event listener เก่าก่อน
+        
         const newCopyBtn = copyBtn.cloneNode(true);
         copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
         
-        // เพิ่ม event listener ใหม่
+      
         newCopyBtn.addEventListener('click', async () => {
             try {
                 await navigator.clipboard.writeText(summary);
@@ -4991,7 +4949,7 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
         });
     }
     
-    // ✅ ปุ่มบันทึก
+    // ปุ่มบันทึก
     const saveBtn = document.getElementById('saveSummaryBtn');
     if (saveBtn) {
         const newSaveBtn = saveBtn.cloneNode(true);
@@ -5030,7 +4988,7 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
         });
     }
     
-    // ✅ ปุ่มดูรายงาน
+    // ปุ่มดูรายงาน
     const viewReportBtn = document.getElementById('viewReportBtn');
     if (viewReportBtn && reportUrl) {
         const newViewReportBtn = viewReportBtn.cloneNode(true);
@@ -5045,7 +5003,7 @@ setupSummaryModalButtons(summaryId, roomId, summary, reportUrl = null) {
         newViewReportBtn.style.borderColor = '#27ae60';
     }
 }
-    // ✅ ฟังก์ชันเปิดหน้ารายงาน
+    // ฟังก์ชันเปิดหน้ารายงาน
     openReportPage(summaryText, roomData) {
         try {
             const room = roomData || this.currentRoom;
@@ -5096,7 +5054,7 @@ formatSummary(summary) {
     
     return html;
 }
-// ✅ เพิ่มฟังก์ชันแสดง Loading Modal
+// ฟังก์ชันแสดง Loading Modal
 showLoadingModal(message) {
     // ลบ modal เก่าถ้ามี
     const oldModal = document.getElementById('loadingModal');
@@ -5127,7 +5085,7 @@ showLoadingModal(message) {
     document.body.appendChild(modal);
 }
 
-// ✅ เพิ่มฟังก์ชันปิด Loading Modal
+// ฟังก์ชันปิด Loading Modal
 closeLoadingModal() {
     const modal = document.getElementById('loadingModal');
     if (modal) modal.remove();
@@ -5153,7 +5111,7 @@ async saveSummary(summary) {
         if (data.success) {
             this.showNotification('สำเร็จ', 'บันทึกสรุปแล้ว', 'success');
             
-            // ✅ อัพเดทปุ่ม view report ถ้ามี
+            
             const viewReportBtn = document.getElementById('viewReportBtn');
             if (viewReportBtn && data.report_url) {
                 viewReportBtn.onclick = () => {
@@ -5161,7 +5119,7 @@ async saveSummary(summary) {
                 };
             }
             
-            return data; // ✅ return ข้อมูลทั้งหมด
+            return data; 
         } else {
             throw new Error(data.error || 'บันทึกล้มเหลว');
         }
@@ -5223,10 +5181,10 @@ async saveSummary(summary) {
             this.closeCreateRoomModal();
             this.showNotification('สร้างห้องสำเร็จ', `สร้างห้อง "${roomName}" สำเร็จ`, 'success');
             
-            // ✅ โหลดห้องใหม่ทันที
+            
             await this.loadChatRooms();
             
-            // ✅ แจ้งเตือนผ่าน Socket
+            
             if (this.socket && this.socket.connected) {
                 this.socket.emit('room_created', {
                     room_id: data.room.room_id,
@@ -5236,7 +5194,7 @@ async saveSummary(summary) {
                 });
             }
             
-            // ✅ เลือกห้องที่สร้างใหม่
+           
             if (data.room) {
                 setTimeout(() => {
                     console.log('🎯 Selecting newly created room:', data.room.room_id);
@@ -5268,11 +5226,11 @@ async saveSummary(summary) {
     }
 
    setupCreateRoomModalEvents() {
-    // ✅ แก้ใหม่: ค้นหาปุ่มทั้ง 2 แบบ
+   
     const createRoomBtn = document.getElementById('createRoomBtn');
     const newGroupBtn = document.getElementById('newGroupBtn');
     
-    // ✅ เพิ่ม Event Listener ทั้ง 2 ปุ่ม
+   
     if (createRoomBtn) {
         createRoomBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -5319,7 +5277,7 @@ async saveSummary(summary) {
     const memberSearch = document.getElementById('memberSearch');
 if (memberSearch) {
     memberSearch.addEventListener('input', (e) => {
-        // เมื่อพิมพ์ค้นหา ให้กรองรายชื่อทันที
+        
         this.renderMembersList(e.target.value);
     });
 }
@@ -5332,7 +5290,7 @@ if (memberSearch) {
         });
     });
     
-    // คลิกนอก modal ให้ปิด
+    
     const modal = document.getElementById('createRoomModal');
     if (modal) {
         modal.addEventListener('click', (e) => {
@@ -5361,19 +5319,19 @@ if (memberSearch) {
     for (const file of files) {
         console.log('📄 Processing file:', file.name, 'size:', file.size, 'type:', file.type);
         
-        // ตรวจสอบขนาดไฟล์ (10MB)
+       
         if (file.size > 10 * 1024 * 1024) {
             this.showNotification('ไฟล์ใหญ่เกิน', `${file.name} มีขนาดเกิน 10MB`, 'error');
             continue;
         }
         
-        // สร้าง FormData
+        
         const formData = new FormData();
         formData.append('file', file);
         formData.append('message_type', file.type.startsWith('image/') ? 'image' : 'file');
         formData.append('message_text', `ส่งไฟล์: ${file.name}`);
         
-        // ✅ Optimistic UI
+        //  Optimistic UI
         const tempId = 'temp_file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
         const isImage = file.type.startsWith('image/');
         
@@ -5400,7 +5358,7 @@ if (memberSearch) {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
-                    // ไม่ต้องใส่ Content-Type เพราะ FormData จะตั้งเอง
+                    
                 },
                 body: formData
             });
@@ -5411,7 +5369,7 @@ if (memberSearch) {
                 const data = await response.json();
                 console.log('✅ Upload success:', data);
                 
-                // แทนที่ temp message
+                
                 this.replaceTempMessage(tempId, data.message || data);
                 
                 this.showNotification('สำเร็จ', `ส่งไฟล์ ${file.name} แล้ว`, 'success');
@@ -5513,7 +5471,7 @@ if (memberSearch) {
 setupEventListeners() {
     console.log('🔧 Setting up event listeners...');
     
-    // ✅ Room members button
+    //  Room members button
     const roomMembersBtn = document.getElementById('roomMembersBtn');
     if (roomMembersBtn) {
         roomMembersBtn.addEventListener('click', () => {
@@ -5521,7 +5479,7 @@ setupEventListeners() {
         });
     }
 
-    // ✅ AI Summary button
+    //  AI Summary button
     const aiSummaryBtn = document.getElementById('aiSummaryBtn');
     if (aiSummaryBtn) {
         aiSummaryBtn.addEventListener('click', () => this.showAISummary());
@@ -5535,7 +5493,7 @@ setupEventListeners() {
         });
     }
     
-    // ✅ Leave room button
+    // Leave room button
     const leaveRoomBtn = document.getElementById('leaveRoomBtn');
     if (leaveRoomBtn) {
         leaveRoomBtn.addEventListener('click', () => {
@@ -5543,7 +5501,7 @@ setupEventListeners() {
         });
     }
     
-    // ✅ Profile button
+    //  Profile button
     const profileBtn = document.getElementById('profileBtn');
     if (profileBtn) {
         profileBtn.addEventListener('click', (e) => {
@@ -5552,16 +5510,16 @@ setupEventListeners() {
         });
     }
     
-    // ✅ Logout button
+    //  Logout button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         console.log('🚪 Setting up logout button...');
         
-        // ✅ ลบ event listener เก่าทั้งหมด
+        
         const newLogoutBtn = logoutBtn.cloneNode(true);
         logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
         
-        // ✅ เพิ่ม event listener ใหม่เพียงครั้งเดียว
+        
         newLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -5571,12 +5529,12 @@ setupEventListeners() {
         
         console.log('✅ Logout button setup complete');
     }
- // ✅ File attachment
+ //  File attachment
 const attachFileBtn = document.getElementById('attachFileBtn');
 const fileInput = document.getElementById('fileInput');
 
 if (attachFileBtn && fileInput) {
-    // ✅ ลบ event listener เก่าก่อน
+   
     const newAttachBtn = attachFileBtn.cloneNode(true);
     attachFileBtn.parentNode.replaceChild(newAttachBtn, attachFileBtn);
     
@@ -5588,7 +5546,7 @@ if (attachFileBtn && fileInput) {
         
         if (!this.currentRoom || !this.currentRoom.room_id) {
             console.log('❌ No room selected');
-            //this.showNotification('แจ้งเตือน', 'กรุณาเลือกห้องสนทนาก่อน', 'info');
+            
             return;
         }
         
@@ -5599,21 +5557,21 @@ if (attachFileBtn && fileInput) {
     const files = Array.from(e.target.files);
     console.log('📎 Files selected:', files);
     
-    // ✅ ไม่เช็คห้องตอนเลือกไฟล์ เช็คตอนกดส่งแทน
+   
     if (files.length > 0) {
         console.log('📎 Showing preview for', files.length, 'files');
         this.showFilePreview(files);
     }
 });
 }
-    // ✅ Message input
+    //  Message input
     const messageInput = document.getElementById('messageInput');
     if (messageInput) {
-        // ลบ event listener เก่า
+        
         const newMessageInput = messageInput.cloneNode(true);
         messageInput.parentNode.replaceChild(newMessageInput, messageInput);
         
-        // เพิ่ม event listener ใหม่
+       
         newMessageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -5630,19 +5588,19 @@ if (attachFileBtn && fileInput) {
         });
     }
     
-   // ✅ Send message button - ต้องใช้ handleSendMessage
+   // Send message button - ต้องใช้ handleSendMessage
 const sendMessageBtn = document.getElementById('sendMessageBtn');
 if (sendMessageBtn) {
-    // ลบ event listener เก่า
+    
     const newSendBtn = sendMessageBtn.cloneNode(true);
     sendMessageBtn.parentNode.replaceChild(newSendBtn, sendMessageBtn);
     
-    // เพิ่ม event listener ใหม่
+    
     newSendBtn.addEventListener('click', (e) => {
         e.preventDefault();
         console.log('🔘 Send button clicked');
         if (this.currentRoom) {
-            this.handleSendMessage();  // ✅ เปลี่ยนเป็น handleSendMessage
+            this.handleSendMessage();  
         } else {
             this.showNotification('แจ้งเตือน', 'กรุณาเลือกห้องสนทนาก่อน', 'info');
         }
@@ -5745,7 +5703,7 @@ if (sendMessageBtn) {
    showProfileModal() {
     console.log('🔍 Checking profile modal...');
     
-    // ✅ 1. ตรวจสอบว่ามี modal อยู่แล้วใน DOM
+    
     const modal = document.getElementById('profileModal');
     
     if (!modal) {
@@ -5756,7 +5714,7 @@ if (sendMessageBtn) {
     
     console.log('✅ Found profile modal');
     
-    // ✅ 2. เติมข้อมูลผู้ใช้ลงใน modal
+    
     if (this.currentUser) {
         // อัพเดทรูปโปรไฟล์
         const profileImg = modal.querySelector('.profile-img');
@@ -5788,25 +5746,24 @@ if (sendMessageBtn) {
         }
     }
     
-    // ✅ 3. แสดง modal
+ 
     modal.classList.add('active');
     console.log('📱 Profile modal opened successfully');
 }
 
-// ✅ 7. เพิ่มฟังก์ชันแก้ไขโปรไฟล์
+
 editProfile() {
     alert('หน้าต่างแก้ไขโปรไฟล์จะเปิดที่นี่');
-    // สามารถเพิ่ม modal สำหรับแก้ไขโปรไฟล์ได้ที่นี่
-    // หรือเปลี่ยนเป็นฟอร์มใน modal เดียวกันก็ได้
+    
 }
 
-// ✅ 8. เพิ่มฟังก์ชันเปลี่ยนรหัสผ่าน
+
 changePassword() {
     alert('หน้าต่างเปลี่ยนรหัสผ่านจะเปิดที่นี่');
-    // สามารถเพิ่ม modal สำหรับเปลี่ยนรหัสผ่านได้ที่นี่
+    
 }
   logout() {
-    // ✅ เพิ่มการป้องกันการเรียกซ้ำ
+   
     if (this.isLoggingOut) {
         console.log('⚠️ Already logging out, skip...');
         return;
@@ -5818,21 +5775,21 @@ changePassword() {
     if (confirm('ต้องการออกจากระบบหรือไม่?')) {
         console.log('✅ User confirmed logout');
         
-        // ✅ หยุด TTS ถ้ากำลังพูดอยู่
+       
         if (this.ttsSupported && speechSynthesis.speaking) {
             speechSynthesis.cancel();
         }
         
-        // ✅ Disconnect socket
+       
         if (this.socket && this.socket.connected) {
             this.socket.disconnect();
         }
         
-        // ✅ ลบข้อมูล
+        
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         
-        // ✅ Redirect
+        
         window.location.href = '/login';
     } else {
         console.log('❌ User cancelled logout');
@@ -5917,7 +5874,7 @@ class ChatSummaryAI {
 
             const data = await response.json();
 
-            // กรณี Rate Limit (429)
+           
             if (response.status === 429) {
                 return {
                     success: false,
@@ -5926,7 +5883,7 @@ class ChatSummaryAI {
                 };
             }
 
-            // กรณี error อื่นๆ
+            
             if (!response.ok) {
                 throw new Error(data.error || `เกิดข้อผิดพลาด (${response.status})`);
             }
@@ -5937,7 +5894,7 @@ class ChatSummaryAI {
 
             console.log('✅ Summary received from server');
 
-            // ส่งข้อมูลตรงจาก API กลับไป
+          
             return {
                 success: true,
                 summary: data.summary,
@@ -5961,16 +5918,12 @@ class ChatSummaryAI {
         }
     }
 
-    /**
-     * ตรวจสอบสถานะการสรุป
-     */
+    
     isActive() {
         return this.isSummarizing;
     }
 
-    /**
-     * ยกเลิกการสรุป (ถ้ามี)
-     */
+    
     cancel() {
         this.isSummarizing = false;
         console.log('🛑 Summary cancelled');
@@ -5980,9 +5933,5 @@ class ChatSummaryAI {
 // =====================================================================
 // END of Chat Summary AI Module
 // =====================================================================
-
-// Initialize the chat app
-window.chatApp = new EnhancedChatApp();
-
 // Initialize the chat app
 window.chatApp = new EnhancedChatApp();
