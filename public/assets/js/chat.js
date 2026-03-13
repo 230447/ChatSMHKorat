@@ -4397,7 +4397,7 @@ renderRoomMembersModal(members) {
         this.validateCreateRoomForm();
     }
 
-    validateCreateRoomForm() {
+  validateCreateRoomForm() {
     const roomNameInput = document.getElementById('roomNameInput');
     const roomTypeRadio = document.querySelector('input[name="roomType"]:checked');
     const createButton = document.getElementById('confirmCreateRoom');
@@ -4413,7 +4413,7 @@ renderRoomMembersModal(members) {
     let isValid = true;
     let errorMessage = '';
     
-    //  ตรวจสอบชื่อห้อง
+    // ตรวจสอบชื่อห้อง
     if (roomName.length < 1) {
         isValid = false;
         errorMessage = 'กรุณาใส่ชื่อห้อง';
@@ -4422,20 +4422,39 @@ renderRoomMembersModal(members) {
         errorMessage = 'ชื่อห้องยาวเกิน 100 ตัวอักษร';
     }
     
-    //  ตรวจสอบสมาชิก
+    // ตรวจสอบสมาชิกตามประเภทห้อง
     if (isValid) {
-        if (roomType === 'private' && this.selectedMemberIds.size !== 1) {
-            isValid = false;
-            errorMessage = 'ห้องส่วนตัวต้องเลือกสมาชิก 1 คน';
-        } else if (roomType === 'group' && this.selectedMemberIds.size < 1) {
-            isValid = false;
-            errorMessage = 'กรุณาเลือกสมาชิกอย่างน้อย 1 คน';
+        if (roomType === 'group') {
+            // ✅ ห้องกลุ่ม: ต้องเลือกสมาชิกอย่างน้อย 2 คน (รวมผู้สร้างแล้ว = 3 คน)
+            if (this.selectedMemberIds.size < 2) {
+                isValid = false;
+                errorMessage = 'ห้องกลุ่มต้องเลือกสมาชิกอย่างน้อย 2 คน';
+            }
+        } else if (roomType === 'private') {
+            // ✅ ห้องส่วนตัว: ต้องเลือกสมาชิก 1 คน (รวมผู้สร้างแล้ว = 2 คน)
+            if (this.selectedMemberIds.size !== 1) {
+                isValid = false;
+                errorMessage = 'ห้องส่วนตัวต้องเลือกสมาชิก 1 คน';
+            }
         }
     }
     
+    // อัปเดตปุ่มสร้างห้อง
     createButton.disabled = !isValid;
     
-    //  แสดงข้อความ error (ถ้ามี element)
+    if (isValid) {
+        createButton.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
+        createButton.style.opacity = '1';
+        createButton.style.cursor = 'pointer';
+        createButton.title = 'สร้างห้อง';
+    } else {
+        createButton.style.background = '#bdc3c7';
+        createButton.style.opacity = '0.6';
+        createButton.style.cursor = 'not-allowed';
+        createButton.title = errorMessage || 'กรุณากรอกข้อมูลให้ครบถ้วน';
+    }
+    
+    // แสดงข้อความ error (ถ้ามี element)
     const errorElement = document.getElementById('createRoomError');
     if (errorElement) {
         errorElement.textContent = errorMessage;
@@ -4445,7 +4464,8 @@ renderRoomMembersModal(members) {
     console.log(`✅ Form validation: ${isValid ? 'VALID' : 'INVALID'}`, {
         roomName: roomName.length,
         roomType,
-        members: this.selectedMemberIds.size
+        selectedMembers: this.selectedMemberIds.size,
+        required: roomType === 'group' ? '≥ 2 คน' : '= 1 คน'
     });
     
     return isValid;
